@@ -16,6 +16,8 @@ final class Plugin
         add_action('wp_after_insert_post', [Publisher::class, 'post_saved'], 10, 4);
         add_action(Publisher::DELIVERY_HOOK, [Publisher::class, 'deliver'], 10, 1);
         add_action('init', [Presentation::class, 'register_block']);
+        add_action('wp_enqueue_scripts', [Presentation::class, 'enqueue_mapped_discussion']);
+        add_filter('the_content', [Presentation::class, 'append_mapped_discussion']);
         add_shortcode('discussionbridge_record', [Presentation::class, 'shortcode']);
     }
 

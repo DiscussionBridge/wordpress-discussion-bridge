@@ -102,6 +102,27 @@ final class Settings
             && strlen(self::connection_secret()) >= 32;
     }
 
+    public static function topic_url_matches(string $value, int $topic_id): bool
+    {
+        if ($topic_id <= 0) {
+            return false;
+        }
+        $parts = wp_parse_url($value);
+        $server = wp_parse_url(self::server_url());
+        if (!is_array($parts) || !is_array($server)
+            || ($parts['scheme'] ?? '') !== 'https'
+            || strtolower((string) ($parts['host'] ?? '')) !== strtolower((string) ($server['host'] ?? ''))
+            || (int) ($parts['port'] ?? 443) !== (int) ($server['port'] ?? 443)
+            || !empty($parts['user']) || !empty($parts['pass'])
+            || !empty($parts['query']) || !empty($parts['fragment'])) {
+            return false;
+        }
+        if (preg_match('#^/t/(?:[^/]+/)?([1-9][0-9]*)(?:/[1-9][0-9]*)?/?$#', (string) ($parts['path'] ?? ''), $matches) !== 1) {
+            return false;
+        }
+        return (int) $matches[1] === $topic_id;
+    }
+
     public static function sanitize_server_url(mixed $value): string
     {
         $value = trim((string) $value);

@@ -70,11 +70,17 @@ final class Publisher
             self::record_failure($post_id, 'invalid_published_post', false);
             return;
         }
+        $content_html = PublishedContent::for_post($post);
+        if (is_wp_error($content_html)) {
+            self::record_failure($post_id, $content_html->get_error_code(), false);
+            return;
+        }
         $record = [
             'direction' => 'to_discourse',
             'external_id' => 'post:' . Settings::site_id() . ':' . $post_id,
             'canonical_url' => $canonical_url,
             'title' => $title,
+            'content_html' => $content_html,
             'published' => true,
             'visibility' => 'unlisted',
             'adapter_id' => 'wordpress-discussionbridge',
@@ -101,7 +107,7 @@ final class Publisher
         if (!in_array($outcome, ['created', 'resolved'], true)
             || !wp_is_uuid($resource_id)
             || $topic_id <= 0
-            || $topic_url === ''
+            || !Settings::topic_url_matches($topic_url, $topic_id)
             || ($result['core_fallback'] ?? null) !== false) {
             self::record_failure($post_id, 'invalid_success_response', false);
             return;

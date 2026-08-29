@@ -1,0 +1,25 @@
+.discussionbridge-discussion {
+  margin-block-start: 3rem;
+  padding-block-start: 2rem;
+  border-block-start: 1px solid currentColor;
+  border-block-start-color: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.discussionbridge-discussion__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 1rem;
+}
+
+.discussionbridge-discussion__header h2 {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .discussionbridge-discussion__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

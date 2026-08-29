@@ -22,6 +22,7 @@ define('DISCUSSIONBRIDGE_WORDPRESS_FILE', __FILE__);
 require_once __DIR__ . '/src/Settings.php';
 require_once __DIR__ . '/src/Client.php';
 require_once __DIR__ . '/src/WpDiscourseGuard.php';
+require_once __DIR__ . '/src/PublishedContent.php';
 require_once __DIR__ . '/src/Publisher.php';
 require_once __DIR__ . '/src/Presentation.php';
 require_once __DIR__ . '/src/Admin.php';
