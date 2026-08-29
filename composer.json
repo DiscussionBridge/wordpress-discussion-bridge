@@ -1,0 +1,10 @@
+{
+  "name": "discussionbridge/wordpress-discussion-bridge",
+  "description": "Native WordPress adapter for DiscussionBridge",
+  "type": "wordpress-plugin",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.1"
+  }
+}
+

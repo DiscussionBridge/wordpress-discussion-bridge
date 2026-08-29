@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "discussionbridge/from-discourse",
+  "version": "0.1.0-alpha.1",
+  "title": "DiscussionBridge / From Discourse",
+  "category": "widgets",
+  "icon": "format-chat",
+  "description": "Render an authorized Discourse-authored Bridge Record.",
+  "textdomain": "discussionbridge",
+  "attributes": {
+    "resourceId": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js"
+}
+
