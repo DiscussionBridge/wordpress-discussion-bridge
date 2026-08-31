@@ -49,6 +49,12 @@
   border: 0;
 }
 
+.discussionbridge-credit {
+  margin-block: 1rem 0;
+  font-size: 0.875rem;
+  opacity: 0.75;
+}
+
 @media (max-width: 520px) {
   .discussionbridge-discussion__header {
     align-items: flex-start;

@@ -71,11 +71,12 @@ final class Presentation
         }
 
         return TableOfContents::render($content) . sprintf(
-            '<section class="discussionbridge-discussion" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div></section>',
+            '<section class="discussionbridge-discussion" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>%s</section>',
             esc_attr($mapping['resource_id']),
             esc_html__('Discussion', 'discussionbridge'),
             esc_url($mapping['topic_url']),
-            esc_html__('Open in Discourse', 'discussionbridge')
+            esc_html__('Open in Discourse', 'discussionbridge'),
+            self::credit()
         );
     }
 
@@ -146,11 +147,62 @@ final class Presentation
         }
 
         return sprintf(
-            '<section class="discussionbridge-record" data-discussionbridge-resource="%s"><div class="discussionbridge-record__content">%s</div>%s</section>',
+            '<section class="discussionbridge-record" data-discussionbridge-resource="%s"><div class="discussionbridge-record__content">%s</div>%s%s</section>',
             esc_attr($resource_id),
-            TableOfContents::render(wp_kses_post($record['content_html'])),
-            $discussion
+            TableOfContents::render(self::clean_source_presentation(wp_kses_post($record['content_html']))),
+            $discussion,
+            self::credit()
         );
+    }
+
+    private static function credit(): string
+    {
+        return sprintf(
+            '<p class="discussionbridge-credit"><a href="%s" rel="nofollow">%s</a></p>',
+            esc_url('https://discussionbridge.dev/'),
+            esc_html__('Connected by DiscussionBridge', 'discussionbridge')
+        );
+    }
+
+    private static function clean_source_presentation(string $html): string
+    {
+        if (!class_exists(\DOMDocument::class) || trim($html) === '') {
+            return str_replace('[discotoc]', '', $html);
+        }
+
+        $document = new \DOMDocument('1.0', 'UTF-8');
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $document->loadHTML(
+            '<?xml encoding="utf-8" ?><div id="discussionbridge-source-root">' . $html . '</div>',
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+        );
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        if (!$loaded) {
+            return str_replace('[discotoc]', '', $html);
+        }
+
+        $xpath = new \DOMXPath($document);
+        $nodes = $xpath->query(
+            '//*[@id="discussionbridge-source-root"]//p[normalize-space(.)="[discotoc]"]'
+            . ' | //*[@id="discussionbridge-source-root"]//*[contains(concat(" ", normalize-space(@class), " "), " lightbox-wrapper ")]'
+            . '//*[contains(concat(" ", normalize-space(@class), " "), " meta ")]'
+        );
+        if ($nodes !== false) {
+            foreach (iterator_to_array($nodes) as $node) {
+                $node->parentNode?->removeChild($node);
+            }
+        }
+
+        $root = $document->getElementById('discussionbridge-source-root');
+        if (!$root instanceof \DOMElement) {
+            return str_replace('[discotoc]', '', $html);
+        }
+        $content = '';
+        foreach ($root->childNodes as $child) {
+            $content .= $document->saveHTML($child);
+        }
+        return $content;
     }
 
     private static function current_comments_mode(): string
