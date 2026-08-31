@@ -7,6 +7,8 @@ namespace DiscussionBridge\WordPress;
 final class Presentation
 {
     private const META_PREFIX = '_discussionbridge_';
+    public const COMMENTS_MODE_META = '_discussionbridge_comments_mode';
+    private static bool $embed_enqueued = false;
 
     public static function register_block(): void
     {
@@ -18,41 +20,40 @@ final class Presentation
     /** @param array<string, mixed> $attributes */
     public static function render_block(array $attributes): string
     {
-        return self::render((string) ($attributes['resourceId'] ?? ''));
+        return self::render(
+            (string) ($attributes['resourceId'] ?? ''),
+            self::valid_mode((string) ($attributes['commentsMode'] ?? 'fullInteractive'))
+        );
     }
 
     public static function shortcode(array|string $attributes = []): string
     {
-        $attributes = shortcode_atts(['resource_id' => ''], is_array($attributes) ? $attributes : [], 'discussionbridge_record');
-        return self::render((string) $attributes['resource_id']);
+        $attributes = shortcode_atts(
+            ['resource_id' => '', 'comments' => 'fullInteractive'],
+            is_array($attributes) ? $attributes : [],
+            'discussionbridge_record'
+        );
+        return self::render((string) $attributes['resource_id'], self::valid_mode((string) $attributes['comments']));
     }
 
     public static function enqueue_mapped_discussion(): void
     {
+        if (!is_admin() && is_singular(Settings::post_types())) {
+            wp_enqueue_style(
+                'discussionbridge-presentation',
+                plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
+                [],
+                DISCUSSIONBRIDGE_WORDPRESS_VERSION
+            );
+        }
         $mapping = self::current_to_discourse_mapping();
         if ($mapping === null) {
             return;
         }
-
-        $script_url = Settings::server_url() . '/javascripts/embed.js';
-        wp_enqueue_style(
-            'discussionbridge-presentation',
-            plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
-            [],
-            DISCUSSIONBRIDGE_WORDPRESS_VERSION
-        );
-        wp_register_script('discussionbridge-discourse-embed', $script_url, [], null, true);
-        wp_add_inline_script(
-            'discussionbridge-discourse-embed',
-            'window.DiscourseEmbed=' . wp_json_encode([
-                'discourseUrl' => Settings::server_url() . '/',
-                'topicId' => $mapping['topic_id'],
-                'fullApp' => true,
-                'dynamicHeight' => true,
-            ], JSON_UNESCAPED_SLASHES) . ';',
-            'before'
-        );
-        wp_enqueue_script('discussionbridge-discourse-embed');
+        $mode = self::current_comments_mode();
+        if ($mode !== 'none') {
+            self::enqueue_embed($mapping['topic_id'], $mode, false);
+        }
     }
 
     public static function append_mapped_discussion(string $content): string
@@ -62,6 +63,10 @@ final class Presentation
         }
         $mapping = self::current_to_discourse_mapping();
         if ($mapping === null) {
+            return $content;
+        }
+        $mode = self::current_comments_mode();
+        if ($mode === 'none') {
             return $content;
         }
 
@@ -100,7 +105,7 @@ final class Presentation
         ];
     }
 
-    private static function render(string $requested_resource_id): string
+    private static function render(string $requested_resource_id, string $comments_mode): string
     {
         $resource_id = trim($requested_resource_id);
         if (!wp_is_uuid($resource_id) || !Settings::ready()) {
@@ -129,12 +134,72 @@ final class Presentation
             return '';
         }
 
+        $discussion = '';
+        if ($comments_mode !== 'none') {
+            self::enqueue_embed($record['topic_id'], $comments_mode, $comments_mode === 'fullInteractive');
+            $discussion = sprintf(
+                '<div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>',
+                esc_html__('Discussion', 'discussionbridge'),
+                esc_url($record['topic_url']),
+                esc_html__('Open in Discourse', 'discussionbridge')
+            );
+        }
+
         return sprintf(
-            '<section class="discussionbridge-record" data-discussionbridge-resource="%s"><div class="discussionbridge-record__content">%s</div><p class="discussionbridge-record__discussion"><a href="%s">%s</a></p></section>',
+            '<section class="discussionbridge-record" data-discussionbridge-resource="%s"><div class="discussionbridge-record__content">%s</div>%s</section>',
             esc_attr($resource_id),
             wp_kses_post($record['content_html']),
-            esc_url($record['topic_url']),
-            esc_html__('Continue the discussion', 'discussionbridge')
+            $discussion
         );
+    }
+
+    private static function current_comments_mode(): string
+    {
+        $post_id = get_queried_object_id();
+        $mode = $post_id > 0 ? (string) get_post_meta($post_id, self::COMMENTS_MODE_META, true) : '';
+        return $mode === '' ? Settings::comments_mode() : self::valid_mode($mode);
+    }
+
+    private static function valid_mode(string $value): string
+    {
+        return in_array($value, ['none', 'full', 'fullInteractive'], true) ? $value : 'fullInteractive';
+    }
+
+    private static function enqueue_embed(int $topic_id, string $mode, bool $source_presentation): void
+    {
+        if (self::$embed_enqueued || $topic_id <= 0 || $mode === 'none') {
+            return;
+        }
+        self::$embed_enqueued = true;
+        wp_enqueue_style(
+            'discussionbridge-presentation',
+            plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
+            [],
+            DISCUSSIONBRIDGE_WORDPRESS_VERSION
+        );
+        wp_register_script(
+            'discussionbridge-discourse-embed',
+            Settings::server_url() . '/javascripts/embed.js',
+            [],
+            null,
+            true
+        );
+        $configuration = [
+            'discourseUrl' => Settings::server_url() . '/',
+            'topicId' => $topic_id,
+        ];
+        if ($mode === 'fullInteractive') {
+            $configuration['fullApp'] = true;
+            $configuration['dynamicHeight'] = false;
+            if ($source_presentation) {
+                $configuration['className'] = 'discussion-bridge-source-presentation';
+            }
+        }
+        wp_add_inline_script(
+            'discussionbridge-discourse-embed',
+            'window.DiscourseEmbed=' . wp_json_encode($configuration, JSON_UNESCAPED_SLASHES) . ';',
+            'before'
+        );
+        wp_enqueue_script('discussionbridge-discourse-embed');
     }
 }

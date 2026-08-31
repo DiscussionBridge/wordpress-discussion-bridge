@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DiscussionBridge for WordPress
  * Description: Connects authoritatively published WordPress content to a DiscussionBridge Discourse forum.
- * Version: 0.1.0-alpha.2
+ * Version: 0.1.0-alpha.3
  * Requires at least: 6.6
  * Requires PHP: 8.1
  * Author: DiscussionBridge
@@ -16,13 +16,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DISCUSSIONBRIDGE_WORDPRESS_VERSION', '0.1.0-alpha.2');
+define('DISCUSSIONBRIDGE_WORDPRESS_VERSION', '0.1.0-alpha.3');
 define('DISCUSSIONBRIDGE_WORDPRESS_FILE', __FILE__);
 
 require_once __DIR__ . '/src/Settings.php';
 require_once __DIR__ . '/src/Client.php';
 require_once __DIR__ . '/src/WpDiscourseGuard.php';
 require_once __DIR__ . '/src/PublishedContent.php';
+require_once __DIR__ . '/src/SourceAuthors.php';
 require_once __DIR__ . '/src/Publisher.php';
 require_once __DIR__ . '/src/Presentation.php';
 require_once __DIR__ . '/src/Admin.php';

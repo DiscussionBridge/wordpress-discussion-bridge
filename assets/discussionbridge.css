@@ -17,9 +17,30 @@
   margin: 0;
 }
 
+.discussionbridge-record > .discussionbridge-discussion__header {
+  margin-block-start: 3rem;
+  padding-block-start: 2rem;
+  border-block-start: 1px solid currentColor;
+  border-block-start-color: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.discussionbridge-discussion iframe,
+.discussionbridge-record iframe {
+  display: block;
+  width: 100%;
+  min-height: 360px;
+  height: 800px !important;
+  border: 0;
+}
+
 @media (max-width: 520px) {
   .discussionbridge-discussion__header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .discussionbridge-discussion iframe,
+  .discussionbridge-record iframe {
+    height: min(800px, 75vh) !important;
   }
 }

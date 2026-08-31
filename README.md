@@ -14,14 +14,25 @@ Current Alpha slice:
   direct-Core fallback;
 - sends the bounded published WordPress body so the Discourse topic contains
   meaningful source content plus canonical attribution;
+- reports the stable WordPress author identity, display name and local author
+  archive to the receiving connection. The forum operator chooses fixed or
+  mapped Discourse authorship in that connection's Authors tab;
 - stores resource/topic/outcome/retry state in protected post metadata;
 - exposes authorized operator status and retry controls;
 - provides the native dynamic `DiscussionBridge / From Discourse` block and a
-  compatibility `[discussionbridge_record resource_id="…"]` shortcode, both
-  rendered server-side with a bounded cache.
-- appends the mapped To Discourse discussion to the original published post
-  through Discourse Core's full-app dynamic-height presentation; Core retains
-  ownership of sessions, replies, composer, moderation, and interaction.
+  compatibility
+  `[discussionbridge_record resource_id="…" comments="fullInteractive"]`
+  shortcode, both rendered server-side with a bounded cache. The block exposes
+  the same discussion-mode choice in the editor;
+- offers `none`, standard plugin-free `full`, and DiscussionBridge
+  `fullInteractive` presentation per published post, with a site default;
+- appends the exact mapped To Discourse discussion to the original published
+  post. `fullInteractive` uses the shared 800px bounded viewport with internal
+  scrolling; Discourse retains ownership of sessions, replies, composer,
+  moderation, and interaction; and
+- renders a From Discourse first post once in WordPress and, when
+  `fullInteractive` is selected, presents that same topic's replies below it
+  without duplicating the first post in the frame.
 
 Configure the Discourse HTTPS origin, `dbc_…` connection ID, lane, and
 published post types under **Settings → DiscussionBridge**. Prefer these

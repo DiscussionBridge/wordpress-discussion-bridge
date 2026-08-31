@@ -35,9 +35,17 @@ final class Admin
     {
         wp_nonce_field('discussionbridge_post_' . $post->ID, 'discussionbridge_post_nonce');
         $enabled = get_post_meta($post->ID, Publisher::ENABLED_META, true) === '1';
+        $comments_mode = (string) get_post_meta($post->ID, Presentation::COMMENTS_MODE_META, true);
         ?>
         <label><input type="checkbox" name="discussionbridge_enabled" value="1" <?php checked($enabled); ?>> <?php echo esc_html__('Create or retain this post’s DiscussionBridge record when it is first published.', 'discussionbridge'); ?></label>
         <p class="description"><?php echo esc_html__('Later edits do not rewrite the Discourse topic. Use the status page for an exact retry.', 'discussionbridge'); ?></p>
+        <p><label for="discussionbridge_comments_mode"><strong><?php echo esc_html__('Discussion mode', 'discussionbridge'); ?></strong></label></p>
+        <select id="discussionbridge_comments_mode" name="discussionbridge_comments_mode">
+            <option value="" <?php selected($comments_mode, ''); ?>><?php echo esc_html__('Use site default', 'discussionbridge'); ?></option>
+            <option value="none" <?php selected($comments_mode, 'none'); ?>><?php echo esc_html__('No discussion', 'discussionbridge'); ?></option>
+            <option value="full" <?php selected($comments_mode, 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
+            <option value="fullInteractive" <?php selected($comments_mode, 'fullInteractive'); ?>><?php echo esc_html__('DiscussionBridge fullInteractive', 'discussionbridge'); ?></option>
+        </select>
         <?php
     }
 
@@ -55,6 +63,14 @@ final class Admin
             update_post_meta($post_id, Publisher::ENABLED_META, '1');
         } else {
             delete_post_meta($post_id, Publisher::ENABLED_META);
+        }
+        $comments_mode = isset($_POST['discussionbridge_comments_mode'])
+            ? (string) wp_unslash($_POST['discussionbridge_comments_mode'])
+            : '';
+        if ($comments_mode === '') {
+            delete_post_meta($post_id, Presentation::COMMENTS_MODE_META);
+        } elseif (in_array($comments_mode, ['none', 'full', 'fullInteractive'], true)) {
+            update_post_meta($post_id, Presentation::COMMENTS_MODE_META, $comments_mode);
         }
     }
 
@@ -83,6 +99,14 @@ final class Admin
                     <tr>
                         <th scope="row"><label for="discussionbridge_server_url"><?php echo esc_html__('Discourse origin', 'discussionbridge'); ?></label></th>
                         <td><input class="regular-text" type="url" id="discussionbridge_server_url" name="<?php echo esc_attr(Settings::SERVER_URL_OPTION); ?>" value="<?php echo esc_attr(Settings::server_url()); ?>" placeholder="https://forum.example" required></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="discussionbridge_comments_mode_default"><?php echo esc_html__('Default discussion mode', 'discussionbridge'); ?></label></th>
+                        <td><select id="discussionbridge_comments_mode_default" name="<?php echo esc_attr(Settings::COMMENTS_MODE_OPTION); ?>">
+                            <option value="none" <?php selected(Settings::comments_mode(), 'none'); ?>><?php echo esc_html__('No discussion', 'discussionbridge'); ?></option>
+                            <option value="full" <?php selected(Settings::comments_mode(), 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
+                            <option value="fullInteractive" <?php selected(Settings::comments_mode(), 'fullInteractive'); ?>><?php echo esc_html__('DiscussionBridge fullInteractive', 'discussionbridge'); ?></option>
+                        </select><p class="description"><?php echo esc_html__('Individual posts may inherit or override this setting.', 'discussionbridge'); ?></p></td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="discussionbridge_connection_id"><?php echo esc_html__('Connection ID', 'discussionbridge'); ?></label></th>

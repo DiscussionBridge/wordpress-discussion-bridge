@@ -18,6 +18,18 @@
             "discussionbridge",
           ),
         }),
+        element.createElement(components.SelectControl, {
+          label: i18n.__("Discussion mode", "discussionbridge"),
+          value: props.attributes.commentsMode || "fullInteractive",
+          options: [
+            { label: i18n.__("No discussion", "discussionbridge"), value: "none" },
+            { label: i18n.__("Standard Discourse comments", "discussionbridge"), value: "full" },
+            { label: i18n.__("DiscussionBridge fullInteractive", "discussionbridge"), value: "fullInteractive" },
+          ],
+          onChange: function (value) {
+            props.setAttributes({ commentsMode: value });
+          },
+        }),
       );
     },
     save: function () {

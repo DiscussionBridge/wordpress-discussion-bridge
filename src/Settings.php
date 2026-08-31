@@ -11,6 +11,7 @@ final class Settings
     public const SITE_ID_OPTION = 'discussionbridge_site_id';
     public const LANE_OPTION = 'discussionbridge_lane';
     public const POST_TYPES_OPTION = 'discussionbridge_post_types';
+    public const COMMENTS_MODE_OPTION = 'discussionbridge_comments_mode';
 
     public static function register(): void
     {
@@ -33,6 +34,11 @@ final class Settings
             'type' => 'array',
             'sanitize_callback' => [self::class, 'sanitize_post_types'],
             'default' => ['post'],
+        ]);
+        register_setting('discussionbridge', self::COMMENTS_MODE_OPTION, [
+            'type' => 'string',
+            'sanitize_callback' => [self::class, 'sanitize_comments_mode'],
+            'default' => 'fullInteractive',
         ]);
     }
 
@@ -86,6 +92,11 @@ final class Settings
     public static function lane(): string
     {
         return (string) get_option(self::LANE_OPTION, '');
+    }
+
+    public static function comments_mode(): string
+    {
+        return self::sanitize_comments_mode(get_option(self::COMMENTS_MODE_OPTION, 'fullInteractive'));
     }
 
     /** @return list<string> */
@@ -169,6 +180,16 @@ final class Settings
         }
         add_settings_error(self::LANE_OPTION, 'invalid_lane', 'DiscussionBridge lane is invalid.');
         return '';
+    }
+
+    public static function sanitize_comments_mode(mixed $value): string
+    {
+        $value = (string) $value;
+        if (in_array($value, ['none', 'full', 'fullInteractive'], true)) {
+            return $value;
+        }
+        add_settings_error(self::COMMENTS_MODE_OPTION, 'invalid_comments_mode', 'DiscussionBridge discussion mode is invalid.');
+        return 'fullInteractive';
     }
 
     /** @return list<string> */

@@ -87,6 +87,7 @@ final class Publisher
             'adapter_version' => DISCUSSIONBRIDGE_WORDPRESS_VERSION,
             'correlation_id' => (string) get_post_meta($post_id, self::META_PREFIX . 'correlation_id', true),
         ];
+        $record = array_merge($record, SourceAuthors::for_post($post));
         if (Settings::lane() !== '') {
             $record['lane'] = Settings::lane();
         }
