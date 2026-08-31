@@ -1,4 +1,4 @@
-[discotoc]
+<div data-theme-toc="true"></div>
 
 This article begins on **The Bridge** and is presented by the live stock WordPress demo. The forum remains authoritative for the source post, discussion, revisions, moderation, and replies.
 
