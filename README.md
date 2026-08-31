@@ -32,7 +32,9 @@ Current Alpha slice:
   moderation, and interaction; and
 - renders a From Discourse first post once in WordPress and, when
   `fullInteractive` is selected, presents that same topic's replies below it
-  without duplicating the first post in the frame.
+  without duplicating the first post in the frame; and
+- builds a credential-free **On this page** navigation from two or more `h2` or
+  `h3` headings in either WordPress-authored or From Discourse content.
 
 Configure the Discourse HTTPS origin, `dbc_…` connection ID, lane, and
 published post types under **Settings → DiscussionBridge**. Prefer these

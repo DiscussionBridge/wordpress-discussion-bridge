@@ -70,7 +70,7 @@ final class Presentation
             return $content;
         }
 
-        return $content . sprintf(
+        return TableOfContents::render($content) . sprintf(
             '<section class="discussionbridge-discussion" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div></section>',
             esc_attr($mapping['resource_id']),
             esc_html__('Discussion', 'discussionbridge'),
@@ -148,7 +148,7 @@ final class Presentation
         return sprintf(
             '<section class="discussionbridge-record" data-discussionbridge-resource="%s"><div class="discussionbridge-record__content">%s</div>%s</section>',
             esc_attr($resource_id),
-            wp_kses_post($record['content_html']),
+            TableOfContents::render(wp_kses_post($record['content_html'])),
             $discussion
         );
     }
