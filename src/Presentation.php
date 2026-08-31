@@ -10,6 +10,14 @@ final class Presentation
     public const COMMENTS_MODE_META = '_discussionbridge_comments_mode';
     private static bool $embed_enqueued = false;
 
+    public static function native_comments_open(bool $open, int $post_id): bool
+    {
+        if ($post_id > 0 && get_post_meta($post_id, Publisher::ENABLED_META, true) === '1') {
+            return false;
+        }
+        return $open;
+    }
+
     public static function register_block(): void
     {
         register_block_type(dirname(__DIR__) . '/blocks/from-discourse', [

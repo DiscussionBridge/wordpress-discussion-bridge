@@ -18,6 +18,8 @@ final class Plugin
         add_action('init', [Presentation::class, 'register_block']);
         add_action('wp_enqueue_scripts', [Presentation::class, 'enqueue_mapped_discussion']);
         add_filter('the_content', [Presentation::class, 'append_mapped_discussion']);
+        add_filter('comments_open', [Presentation::class, 'native_comments_open'], 10, 2);
+        add_filter('pings_open', [Presentation::class, 'native_comments_open'], 10, 2);
         add_shortcode('discussionbridge_record', [Presentation::class, 'shortcode']);
     }
 
