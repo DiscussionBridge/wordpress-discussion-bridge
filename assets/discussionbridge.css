@@ -50,9 +50,50 @@
 }
 
 .discussionbridge-credit {
-  margin-block: 1rem 0;
+  margin: 0.45rem 0 0;
+  color: inherit;
+  text-align: center;
   font-size: 0.875rem;
-  opacity: 0.75;
+  font-weight: 600;
+  line-height: 1.4;
+  opacity: 0.72;
+}
+
+.discussionbridge-credit__brand {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.discussionbridge-credit__brand::after {
+  position: absolute;
+  right: 0;
+  bottom: -0.12em;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
+.discussionbridge-credit__brand:hover,
+.discussionbridge-credit__brand:focus-visible {
+  color: var(--wp--preset--color--accent-2, #3451b2);
+  opacity: 1;
+}
+
+.discussionbridge-credit__brand:hover::after,
+.discussionbridge-credit__brand:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.discussionbridge-credit__brand:focus-visible {
+  border-radius: 0.15rem;
+  outline: 2px solid currentColor;
+  outline-offset: 0.2rem;
 }
 
 @media (max-width: 520px) {
@@ -64,5 +105,12 @@
   .discussionbridge-discussion iframe,
   .discussionbridge-record iframe {
     height: min(800px, 75vh) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discussionbridge-credit__brand,
+  .discussionbridge-credit__brand::after {
+    transition: none;
   }
 }

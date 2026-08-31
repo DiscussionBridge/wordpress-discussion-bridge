@@ -158,9 +158,11 @@ final class Presentation
     private static function credit(): string
     {
         return sprintf(
-            '<p class="discussionbridge-credit"><a href="%s" rel="nofollow">%s</a></p>',
+            '<footer class="discussionbridge-credit" aria-label="%s"><span class="discussionbridge-credit__prefix">%s</span> <a class="discussionbridge-credit__brand" href="%s" rel="nofollow">%s</a></footer>',
+            esc_attr__('DiscussionBridge credit', 'discussionbridge'),
+            esc_html__('Connected by', 'discussionbridge'),
             esc_url('https://discussionbridge.dev/'),
-            esc_html__('Connected by DiscussionBridge', 'discussionbridge')
+            esc_html__('DiscussionBridge', 'discussionbridge')
         );
     }
 
