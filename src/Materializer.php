@@ -25,7 +25,8 @@ final class Materializer
                 break;
             }
             foreach ($payload['bridge_records'] as $record) {
-                if (!is_array($record) || ($record['direction'] ?? null) !== 'from_discourse') {
+                if (!is_array($record) || ($record['direction'] ?? null) !== 'from_discourse'
+                    || !self::native_materialization_authorized($record)) {
                     continue;
                 }
                 $result = self::materialize($record);
@@ -185,5 +186,21 @@ final class Materializer
             && strtolower((string) ($url['host'] ?? '')) === strtolower((string) ($home['host'] ?? ''))
             && (int) ($url['port'] ?? 443) === (int) ($home['port'] ?? 443)
             && empty($url['user']) && empty($url['pass']) && empty($url['query']) && empty($url['fragment']);
+    }
+
+    private static function native_materialization_authorized(array $record): bool
+    {
+        $bindings = $record['bindings'] ?? null;
+        if (!is_array($bindings)) {
+            return false;
+        }
+        foreach ($bindings as $binding) {
+            if (is_array($binding) && ($binding['role'] ?? null) === 'presentation'
+                && ($binding['state'] ?? null) === 'active'
+                && ($binding['native_materialization'] ?? null) === true) {
+                return true;
+            }
+        }
+        return false;
     }
 }
