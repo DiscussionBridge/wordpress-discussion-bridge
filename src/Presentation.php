@@ -332,7 +332,7 @@ final class Presentation
                 . '</span><span class="discussionbridge-simple__more-open">' . esc_html__('Show fewer comments', 'discussionbridge') . '</span></summary>' . implode('', $remaining) . '</details>';
         }
         if (count($stream) - 1 > self::MAX_SIMPLE_REPLIES) {
-            $replies .= '<p class="discussionbridge-simple__limit">' . esc_html(sprintf(__('Showing the first %d replies.', 'discussionbridge'), self::MAX_SIMPLE_REPLIES))
+            $replies .= '<p class="discussionbridge-simple__limit">' . esc_html(sprintf(__('Showing the first %d comments.', 'discussionbridge'), self::MAX_SIMPLE_REPLIES))
                 . ' <a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('View the complete discussion on The Bridge', 'discussionbridge') . '</a>.</p>';
         }
         wp_enqueue_style('discussionbridge-presentation', plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION);
