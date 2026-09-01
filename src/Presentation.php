@@ -338,7 +338,30 @@ final class Presentation
         wp_enqueue_style('discussionbridge-presentation', plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION);
         return '<section class="discussionbridge-simple"><div class="discussionbridge-discussion__header"><h2>' . esc_html__('Comments', 'discussionbridge')
             . '</h2><a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('Open discussion', 'discussionbridge') . '</a></div>'
-            . $replies . ($include_credit ? self::credit() : '') . '</section>';
+            . $replies . self::discourse_credit($client) . ($include_credit ? self::credit() : '') . '</section>';
+    }
+
+    private static function discourse_credit(Client $client): string
+    {
+        $cache_key = 'discussionbridge_powered_by_' . hash('sha256', Settings::server_url());
+        $cached = get_transient($cache_key);
+        if ($cached !== 'enabled' && $cached !== 'disabled') {
+            $enabled = $client->public_powered_by_discourse();
+            if (is_wp_error($enabled)) {
+                return '';
+            }
+            set_transient($cache_key, $enabled ? 'enabled' : 'disabled', 10 * MINUTE_IN_SECONDS);
+        } else {
+            $enabled = $cached === 'enabled';
+        }
+        if (!$enabled) {
+            return '';
+        }
+        $wordmark = file_get_contents(plugin_dir_path(DISCUSSIONBRIDGE_WORDPRESS_FILE) . 'assets/discourse-wordmark.svg');
+        if (!is_string($wordmark) || $wordmark === '') {
+            return '';
+        }
+        return '<a class="discussionbridge-powered-by" href="https://www.discourse.org/powered-by" aria-label="Powered by Discourse" rel="nofollow noopener noreferrer"><span>Powered by</span><span class="discussionbridge-powered-by__wordmark">' . $wordmark . '</span></a>';
     }
 
     /** @param array<string, mixed> $post */

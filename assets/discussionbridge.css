@@ -117,6 +117,10 @@
   opacity: 1;
 }
 
+.discussionbridge-powered-by { display: flex; align-items: center; justify-content: center; gap: 0.45rem; margin: 0.8rem auto 0; color: inherit; font-size: 0.8rem; text-decoration: none; opacity: 0.72; }
+.discussionbridge-powered-by__wordmark { display: inline-flex; width: 6.4rem; padding: 0.12rem 0.28rem; border-radius: 0.2rem; background: #fff; }
+.discussionbridge-powered-by__wordmark svg { display: block; width: 100%; height: auto; }
+
 .discussionbridge-credit__brand:hover::after,
 .discussionbridge-credit__brand:focus-visible::after {
   transform: scaleX(1);

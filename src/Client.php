@@ -68,6 +68,37 @@ final class Client
         return $this->request('GET', '/t/' . $topic_id . '/posts.json?' . $query, null, false);
     }
 
+    public function public_powered_by_discourse(): bool|WP_Error
+    {
+        $response = wp_safe_remote_get(Settings::server_url() . '/', [
+            'timeout' => self::TIMEOUT_SECONDS,
+            'redirection' => 0,
+            'reject_unsafe_urls' => true,
+            'limit_response_size' => 512 * 1024,
+            'headers' => [
+                'Accept' => 'text/html',
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+            ],
+        ]);
+        if (is_wp_error($response)) {
+            return new WP_Error('discussionbridge_branding_transport_failed', 'Discourse branding request failed.');
+        }
+        $content_type = strtolower((string) wp_remote_retrieve_header($response, 'content-type'));
+        $body = (string) wp_remote_retrieve_body($response);
+        if ((int) wp_remote_retrieve_response_code($response) !== 200 || !str_starts_with($content_type, 'text/html') || strlen($body) > 512 * 1024
+            || preg_match('/<script[^>]+id=["\']data-preloaded["\'][^>]*>(.*?)<\/script>/is', $body, $match) !== 1) {
+            return new WP_Error('discussionbridge_invalid_branding_response', 'Discourse branding response is invalid.');
+        }
+        $outer = json_decode($match[1], true, 64, JSON_BIGINT_AS_STRING);
+        $settings = is_array($outer) && is_string($outer['siteSettings'] ?? null)
+            ? json_decode($outer['siteSettings'], true, 64, JSON_BIGINT_AS_STRING)
+            : null;
+        if (!is_array($settings) || !is_bool($settings['enable_powered_by_discourse'] ?? null)) {
+            return new WP_Error('discussionbridge_invalid_branding_setting', 'Discourse branding setting is invalid.');
+        }
+        return $settings['enable_powered_by_discourse'];
+    }
+
     /** @return array<string, mixed>|WP_Error */
     private function request(string $method, string $path, ?array $payload = null, bool $authenticate = true): array|WP_Error
     {
