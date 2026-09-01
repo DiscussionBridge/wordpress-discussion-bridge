@@ -56,6 +56,16 @@ final class Presentation
                 [],
                 DISCUSSIONBRIDGE_WORDPRESS_VERSION
             );
+            $post_id = (int) get_queried_object_id();
+            if ($post_id > 0 && get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1') {
+                wp_enqueue_script(
+                    'discussionbridge-rich-content',
+                    plugins_url('assets/discussionbridge-rich-content.js', DISCUSSIONBRIDGE_WORDPRESS_FILE),
+                    [],
+                    DISCUSSIONBRIDGE_WORDPRESS_VERSION,
+                    true
+                );
+            }
         }
         $mapping = self::current_to_discourse_mapping();
         if ($mapping === null) {
