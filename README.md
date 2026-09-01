@@ -24,8 +24,11 @@ Current Alpha slice:
   `[discussionbridge_record resource_id="…" comments="fullInteractive"]`
   shortcode, both rendered server-side with a bounded cache. The block exposes
   the same discussion-mode choice in the editor;
-- offers `none`, standard plugin-free `full`, and DiscussionBridge
+- offers `none`, native plugin-free `simple`, standard plugin-free `full`, and DiscussionBridge
   `fullInteractive` presentation per published post, with a site default;
+- renders Simple as sanitized native reply cards, five initially with a
+  **Show more comments** disclosure, fetching at most 50 replies in bounded
+  server-side batches before continuing on The Bridge;
 - appends the exact mapped To Discourse discussion to the original published
   post. `fullInteractive` uses the shared 800px bounded viewport with internal
   scrolling; Discourse retains ownership of sessions, replies, composer,

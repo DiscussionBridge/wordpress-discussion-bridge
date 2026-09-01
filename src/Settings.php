@@ -185,7 +185,7 @@ final class Settings
     public static function sanitize_comments_mode(mixed $value): string
     {
         $value = (string) $value;
-        if (in_array($value, ['none', 'full', 'fullInteractive'], true)) {
+        if (in_array($value, ['none', 'simple', 'full', 'fullInteractive'], true)) {
             return $value;
         }
         add_settings_error(self::COMMENTS_MODE_OPTION, 'invalid_comments_mode', 'DiscussionBridge discussion mode is invalid.');

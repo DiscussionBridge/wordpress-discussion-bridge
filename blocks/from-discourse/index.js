@@ -23,6 +23,7 @@
           value: props.attributes.commentsMode || "fullInteractive",
           options: [
             { label: i18n.__("No discussion", "discussionbridge"), value: "none" },
+            { label: i18n.__("Simple comments", "discussionbridge"), value: "simple" },
             { label: i18n.__("Standard Discourse comments", "discussionbridge"), value: "full" },
             { label: i18n.__("DiscussionBridge fullInteractive", "discussionbridge"), value: "fullInteractive" },
           ],

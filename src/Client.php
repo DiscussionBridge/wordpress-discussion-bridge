@@ -34,7 +34,33 @@ final class Client
     }
 
     /** @return array<string, mixed>|WP_Error */
-    private function request(string $method, string $path, ?array $payload = null): array|WP_Error
+    public function public_topic(int $topic_id): array|WP_Error
+    {
+        if ($topic_id <= 0) {
+            return new WP_Error('discussionbridge_invalid_topic_id', 'The Discourse topic ID is invalid.');
+        }
+        return $this->request('GET', '/t/' . $topic_id . '.json', null, false);
+    }
+
+    /** @param list<int> $post_ids
+     *  @return array<string, mixed>|WP_Error
+     */
+    public function public_topic_posts(int $topic_id, array $post_ids): array|WP_Error
+    {
+        if ($topic_id <= 0 || $post_ids === [] || count($post_ids) > 20) {
+            return new WP_Error('discussionbridge_invalid_topic_posts', 'The Discourse topic post request is invalid.');
+        }
+        foreach ($post_ids as $post_id) {
+            if (!is_int($post_id) || $post_id <= 0) {
+                return new WP_Error('discussionbridge_invalid_topic_posts', 'The Discourse topic post request is invalid.');
+            }
+        }
+        $query = http_build_query(['post_ids' => array_values(array_unique($post_ids))]);
+        return $this->request('GET', '/t/' . $topic_id . '/posts.json?' . $query, null, false);
+    }
+
+    /** @return array<string, mixed>|WP_Error */
+    private function request(string $method, string $path, ?array $payload = null, bool $authenticate = true): array|WP_Error
     {
         if (!Settings::ready()) {
             return new WP_Error('discussionbridge_not_configured', 'DiscussionBridge is not configured.');
@@ -49,17 +75,18 @@ final class Client
         }
 
         $url = Settings::server_url() . $path;
+        $headers = ['Accept' => 'application/json'];
+        if ($authenticate) {
+            $headers['X-DiscussionBridge-Connection'] = Settings::connection_id();
+            $headers['X-DiscussionBridge-Secret'] = Settings::connection_secret();
+        }
         $args = [
             'method' => $method,
             'timeout' => self::TIMEOUT_SECONDS,
             'redirection' => 0,
             'reject_unsafe_urls' => true,
             'limit_response_size' => self::MAX_RESPONSE_BYTES,
-            'headers' => [
-                'Accept' => 'application/json',
-                'X-DiscussionBridge-Connection' => Settings::connection_id(),
-                'X-DiscussionBridge-Secret' => Settings::connection_secret(),
-            ],
+            'headers' => $headers,
         ];
         if ($body !== null) {
             $args['headers']['Content-Type'] = 'application/json';
@@ -94,4 +121,3 @@ final class Client
         ]);
     }
 }
-

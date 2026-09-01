@@ -43,6 +43,7 @@ final class Admin
         <select id="discussionbridge_comments_mode" name="discussionbridge_comments_mode">
             <option value="" <?php selected($comments_mode, ''); ?>><?php echo esc_html__('Use site default', 'discussionbridge'); ?></option>
             <option value="none" <?php selected($comments_mode, 'none'); ?>><?php echo esc_html__('No discussion', 'discussionbridge'); ?></option>
+            <option value="simple" <?php selected($comments_mode, 'simple'); ?>><?php echo esc_html__('Simple comments', 'discussionbridge'); ?></option>
             <option value="full" <?php selected($comments_mode, 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
             <option value="fullInteractive" <?php selected($comments_mode, 'fullInteractive'); ?>><?php echo esc_html__('DiscussionBridge fullInteractive', 'discussionbridge'); ?></option>
         </select>
@@ -69,7 +70,7 @@ final class Admin
             : '';
         if ($comments_mode === '') {
             delete_post_meta($post_id, Presentation::COMMENTS_MODE_META);
-        } elseif (in_array($comments_mode, ['none', 'full', 'fullInteractive'], true)) {
+        } elseif (in_array($comments_mode, ['none', 'simple', 'full', 'fullInteractive'], true)) {
             update_post_meta($post_id, Presentation::COMMENTS_MODE_META, $comments_mode);
         }
     }
@@ -104,6 +105,7 @@ final class Admin
                         <th scope="row"><label for="discussionbridge_comments_mode_default"><?php echo esc_html__('Default discussion mode', 'discussionbridge'); ?></label></th>
                         <td><select id="discussionbridge_comments_mode_default" name="<?php echo esc_attr(Settings::COMMENTS_MODE_OPTION); ?>">
                             <option value="none" <?php selected(Settings::comments_mode(), 'none'); ?>><?php echo esc_html__('No discussion', 'discussionbridge'); ?></option>
+                            <option value="simple" <?php selected(Settings::comments_mode(), 'simple'); ?>><?php echo esc_html__('Simple comments', 'discussionbridge'); ?></option>
                             <option value="full" <?php selected(Settings::comments_mode(), 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
                             <option value="fullInteractive" <?php selected(Settings::comments_mode(), 'fullInteractive'); ?>><?php echo esc_html__('DiscussionBridge fullInteractive', 'discussionbridge'); ?></option>
                         </select><p class="description"><?php echo esc_html__('Individual posts may inherit or override this setting.', 'discussionbridge'); ?></p></td>

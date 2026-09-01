@@ -7,6 +7,8 @@ namespace DiscussionBridge\WordPress;
 final class Presentation
 {
     private const META_PREFIX = '_discussionbridge_';
+    private const INITIAL_SIMPLE_REPLIES = 5;
+    private const MAX_SIMPLE_REPLIES = 50;
     public const COMMENTS_MODE_META = '_discussionbridge_comments_mode';
     private static bool $embed_enqueued = false;
 
@@ -59,7 +61,7 @@ final class Presentation
             return;
         }
         $mode = self::current_comments_mode();
-        if ($mode !== 'none') {
+        if (!in_array($mode, ['none', 'simple'], true)) {
             self::enqueue_embed($mapping['topic_id'], $mode, false);
         }
     }
@@ -76,6 +78,11 @@ final class Presentation
         $mode = self::current_comments_mode();
         if ($mode === 'none') {
             return $content;
+        }
+
+        if ($mode === 'simple') {
+            $simple = self::render_simple($mapping['topic_id'], $mapping['topic_url']);
+            return $simple === '' ? $content : TableOfContents::render($content) . $simple;
         }
 
         return TableOfContents::render($content) . sprintf(
@@ -145,13 +152,17 @@ final class Presentation
 
         $discussion = '';
         if ($comments_mode !== 'none') {
-            self::enqueue_embed($record['topic_id'], $comments_mode, $comments_mode === 'fullInteractive');
-            $discussion = sprintf(
-                '<div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>',
-                esc_html__('Discussion', 'discussionbridge'),
-                esc_url($record['topic_url']),
-                esc_html__('Open in Discourse', 'discussionbridge')
-            );
+            if ($comments_mode === 'simple') {
+                $discussion = self::render_simple($record['topic_id'], $record['topic_url'], false);
+            } else {
+                self::enqueue_embed($record['topic_id'], $comments_mode, $comments_mode === 'fullInteractive');
+                $discussion = sprintf(
+                    '<div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>',
+                    esc_html__('Discussion', 'discussionbridge'),
+                    esc_url($record['topic_url']),
+                    esc_html__('Open in Discourse', 'discussionbridge')
+                );
+            }
         }
 
         return sprintf(
@@ -224,7 +235,108 @@ final class Presentation
 
     private static function valid_mode(string $value): string
     {
-        return in_array($value, ['none', 'full', 'fullInteractive'], true) ? $value : 'fullInteractive';
+        return in_array($value, ['none', 'simple', 'full', 'fullInteractive'], true) ? $value : 'fullInteractive';
+    }
+
+    private static function render_simple(int $topic_id, string $topic_url, bool $include_credit = true): string
+    {
+        if ($topic_id <= 0 || !Settings::topic_url_matches($topic_url, $topic_id)) {
+            return '';
+        }
+        $cache_key = 'discussionbridge_simple_' . hash('sha256', Settings::server_url() . "\n" . $topic_id);
+        $topic = get_transient($cache_key);
+        if (!is_array($topic)) {
+            $topic = (new Client())->public_topic($topic_id);
+            if (is_wp_error($topic)) {
+                return '';
+            }
+            set_transient($cache_key, $topic, 60);
+        }
+        $post_stream = $topic['post_stream'] ?? null;
+        $posts = is_array($post_stream) ? ($post_stream['posts'] ?? null) : null;
+        $stream = is_array($post_stream) ? ($post_stream['stream'] ?? null) : null;
+        if (!is_array($posts) || !is_array($stream)) {
+            return '';
+        }
+        $target_ids = array_slice($stream, 1, self::MAX_SIMPLE_REPLIES);
+        foreach ($target_ids as $post_id) {
+            if (!is_int($post_id) || $post_id <= 0) {
+                return '';
+            }
+        }
+        $posts_by_id = [];
+        foreach ($posts as $post) {
+            if (is_array($post) && is_int($post['id'] ?? null) && $post['id'] > 0) {
+                $posts_by_id[$post['id']] = $post;
+            }
+        }
+        $missing = array_values(array_diff($target_ids, array_keys($posts_by_id)));
+        $client = new Client();
+        foreach (array_chunk($missing, 20) as $batch) {
+            $additional = $client->public_topic_posts($topic_id, $batch);
+            if (is_wp_error($additional) || !is_array($additional['post_stream']['posts'] ?? null)) {
+                return '';
+            }
+            foreach ($additional['post_stream']['posts'] as $post) {
+                if (!is_array($post) || !is_int($post['id'] ?? null) || $post['id'] <= 0) {
+                    return '';
+                }
+                $posts_by_id[$post['id']] = $post;
+            }
+        }
+        $rendered = [];
+        foreach ($target_ids as $post_id) {
+            $post = $posts_by_id[$post_id] ?? null;
+            if (!is_array($post)
+                || !is_int($post['post_number'] ?? null) || $post['post_number'] < 2
+                || !is_string($post['username'] ?? null) || trim($post['username']) === '' || strlen($post['username']) > 100
+                || !is_string($post['cooked'] ?? null) || !is_string($post['created_at'] ?? null)) {
+                return '';
+            }
+            try {
+                $created = new \DateTimeImmutable($post['created_at']);
+            } catch (\Throwable) {
+                return '';
+            }
+            $body = wp_kses_post($post['cooked']);
+            if (trim($body) === '') {
+                continue;
+            }
+            $name = is_string($post['name'] ?? null) && trim($post['name']) !== '' ? trim($post['name']) : trim($post['username']);
+            $avatar = self::simple_avatar($post, $post['username']);
+            $post_url = untrailingslashit($topic_url) . '/' . $post['post_number'];
+            $rendered[] = '<article class="discussionbridge-simple__reply">' . $avatar
+                . '<div class="discussionbridge-simple__content"><header class="discussionbridge-simple__meta"><strong>' . esc_html($name)
+                . '</strong><a href="' . esc_url($post_url) . '" rel="nofollow noopener noreferrer"><time datetime="' . esc_attr($created->format(DATE_ATOM)) . '">' . esc_html($created->format('M j, Y'))
+                . '</time></a></header><div class="discussionbridge-simple__body">' . $body . '</div></div></article>';
+        }
+        $replies = $rendered === [] ? '<p class="discussionbridge-simple__empty">' . esc_html__('No replies yet.', 'discussionbridge') . '</p>' : implode('', array_slice($rendered, 0, self::INITIAL_SIMPLE_REPLIES));
+        $remaining = array_slice($rendered, self::INITIAL_SIMPLE_REPLIES);
+        if ($remaining !== []) {
+            $count = count($remaining);
+            $replies .= '<details class="discussionbridge-simple__more"><summary><span class="discussionbridge-simple__more-closed">'
+                . esc_html(sprintf(_n('Show %d more comment', 'Show %d more comments', $count, 'discussionbridge'), $count))
+                . '</span><span class="discussionbridge-simple__more-open">' . esc_html__('Show fewer comments', 'discussionbridge') . '</span></summary>' . implode('', $remaining) . '</details>';
+        }
+        if (count($stream) - 1 > self::MAX_SIMPLE_REPLIES) {
+            $replies .= '<p class="discussionbridge-simple__limit">' . esc_html(sprintf(__('Showing the first %d replies.', 'discussionbridge'), self::MAX_SIMPLE_REPLIES))
+                . ' <a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('View the complete discussion on The Bridge', 'discussionbridge') . '</a>.</p>';
+        }
+        wp_enqueue_style('discussionbridge-presentation', plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION);
+        return '<section class="discussionbridge-simple"><div class="discussionbridge-discussion__header"><h2>' . esc_html__('Comments', 'discussionbridge')
+            . '</h2><a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('Open discussion', 'discussionbridge') . '</a></div>'
+            . $replies . ($include_credit ? self::credit() : '') . '</section>';
+    }
+
+    /** @param array<string, mixed> $post */
+    private static function simple_avatar(array $post, string $username): string
+    {
+        $template = $post['avatar_template'] ?? null;
+        if (is_string($template) && str_starts_with($template, '/') && !str_starts_with($template, '//') && strlen($template) <= 500 && preg_match('/[\x00-\x1f\x7f]/', $template) !== 1) {
+            $url = Settings::server_url() . str_replace('{size}', '48', $template);
+            return '<span class="discussionbridge-simple__avatar" aria-hidden="true"><img src="' . esc_url($url) . '" alt="" width="48" height="48" loading="lazy"></span>';
+        }
+        return '<span class="discussionbridge-simple__avatar discussionbridge-simple__avatar--fallback" aria-hidden="true">' . esc_html(strtoupper(substr(trim($username), 0, 1))) . '</span>';
     }
 
     private static function enqueue_embed(int $topic_id, string $mode, bool $source_presentation): void
