@@ -21,7 +21,8 @@ Current Alpha slice:
 - exposes authorized operator status and retry controls;
 - synchronizes authorized Publishing records into genuine native WordPress
   posts, retaining exact Discourse source revision, author, topic, resource and
-  destination-URL provenance and updating only when that revision advances;
+  destination-URL provenance and updating only when that revision advances.
+  Older presentation-only records are never treated as publication authority;
 - provides the native dynamic `DiscussionBridge / From Discourse` block and a
   compatibility
   `[discussionbridge_record resource_id="…" comments="fullInteractive"]`

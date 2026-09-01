@@ -161,6 +161,9 @@ final class Materializer
                 if ($canonical_url !== null || !is_string($binding['canonical_url'] ?? null)) {
                     return new WP_Error('discussionbridge_materialization_binding', 'The presentation binding is ambiguous.');
                 }
+                if (($binding['native_materialization'] ?? null) !== true) {
+                    return new WP_Error('discussionbridge_materialization_not_authorized', 'Native materialization is not authorized for this binding.');
+                }
                 $canonical_url = $binding['canonical_url'];
             }
         }
