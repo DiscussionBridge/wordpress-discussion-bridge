@@ -323,7 +323,7 @@ final class Presentation
                 . '</strong><a href="' . esc_url($post_url) . '" rel="nofollow noopener noreferrer"><time datetime="' . esc_attr($created->format(DATE_ATOM)) . '">' . esc_html($created->format('M j, Y'))
                 . '</time></a></header><div class="discussionbridge-simple__body">' . $body . '</div></div></article>';
         }
-        $replies = $rendered === [] ? '<p class="discussionbridge-simple__empty">' . esc_html__('No replies yet.', 'discussionbridge') . '</p>' : implode('', array_slice($rendered, 0, self::INITIAL_SIMPLE_REPLIES));
+        $replies = $rendered === [] ? '<p class="discussionbridge-simple__empty">' . esc_html__('No comments yet.', 'discussionbridge') . '</p>' : implode('', array_slice($rendered, 0, self::INITIAL_SIMPLE_REPLIES));
         $remaining = array_slice($rendered, self::INITIAL_SIMPLE_REPLIES);
         if ($remaining !== []) {
             $count = count($remaining);
