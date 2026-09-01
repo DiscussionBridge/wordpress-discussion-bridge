@@ -17,6 +17,17 @@ final class Admin
         );
     }
 
+    public static function sync_publications(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to synchronize DiscussionBridge publications.', 'discussionbridge'));
+        }
+        check_admin_referer('discussionbridge_sync_publications');
+        $result = Materializer::sync();
+        wp_safe_redirect(add_query_arg(array_map('absint', $result), admin_url('options-general.php?page=discussionbridge')));
+        exit;
+    }
+
     public static function register_meta_box(): void
     {
         foreach (Settings::post_types() as $post_type) {
@@ -135,6 +146,12 @@ final class Admin
             </form>
 
             <h2><?php echo esc_html__('Published-content delivery', 'discussionbridge'); ?></h2>
+            <p><?php echo esc_html__('Materialize authorized From Discourse publications as native WordPress posts, then update them only when the exact Discourse source revision changes.', 'discussionbridge'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="discussionbridge_sync_publications">
+                <?php wp_nonce_field('discussionbridge_sync_publications'); ?>
+                <?php submit_button(__('Synchronize publications', 'discussionbridge'), 'secondary', 'submit', false); ?>
+            </form>
             <p><code>[discussionbridge_record resource_id="…"]</code> <?php echo esc_html__('renders an authorized From Discourse record.', 'discussionbridge'); ?></p>
             <table class="widefat striped">
                 <thead><tr><th><?php echo esc_html__('Post', 'discussionbridge'); ?></th><th><?php echo esc_html__('Status', 'discussionbridge'); ?></th><th><?php echo esc_html__('Resource', 'discussionbridge'); ?></th><th><?php echo esc_html__('Topic', 'discussionbridge'); ?></th><th><?php echo esc_html__('Last result', 'discussionbridge'); ?></th><th></th></tr></thead>

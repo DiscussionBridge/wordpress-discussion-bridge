@@ -14,7 +14,8 @@ final class Presentation
 
     public static function native_comments_open(bool $open, int $post_id): bool
     {
-        if ($post_id > 0 && get_post_meta($post_id, Publisher::ENABLED_META, true) === '1') {
+        if ($post_id > 0 && (get_post_meta($post_id, Publisher::ENABLED_META, true) === '1'
+            || get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1')) {
             return false;
         }
         return $open;

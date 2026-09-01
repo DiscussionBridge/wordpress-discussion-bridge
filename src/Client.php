@@ -34,6 +34,15 @@ final class Client
     }
 
     /** @return array<string, mixed>|WP_Error */
+    public function records(int $page = 1): array|WP_Error
+    {
+        if ($page < 1 || $page > 10000) {
+            return new WP_Error('discussionbridge_invalid_page', 'The DiscussionBridge record page is invalid.');
+        }
+        return $this->request('GET', '/discussion-bridge/v1/bridge-records.json?page=' . $page);
+    }
+
+    /** @return array<string, mixed>|WP_Error */
     public function public_topic(int $topic_id): array|WP_Error
     {
         if ($topic_id <= 0) {
