@@ -86,7 +86,8 @@ final class Presentation
         }
 
         return TableOfContents::render($content) . sprintf(
-            '<section class="discussionbridge-discussion" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>%s</section>',
+            '<section class="discussionbridge-discussion discussionbridge-discussion--%s" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>%s</section>',
+            esc_attr($mode),
             esc_attr($mapping['resource_id']),
             esc_html__('Discussion', 'discussionbridge'),
             esc_url($mapping['topic_url']),
@@ -166,7 +167,8 @@ final class Presentation
         }
 
         return sprintf(
-            '<section class="discussionbridge-record" data-discussionbridge-resource="%s"><div class="discussionbridge-record__content">%s</div>%s%s</section>',
+            '<section class="discussionbridge-record discussionbridge-record--%s" data-discussionbridge-resource="%s"><div class="discussionbridge-record__content">%s</div>%s%s</section>',
+            esc_attr($comments_mode),
             esc_attr($resource_id),
             TableOfContents::render(self::clean_source_presentation(wp_kses_post($record['content_html']))),
             $discussion,
