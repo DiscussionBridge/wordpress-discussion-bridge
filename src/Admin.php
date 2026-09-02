@@ -134,6 +134,10 @@ final class Admin
                         <td><input class="regular-text" type="text" id="discussionbridge_lane" name="<?php echo esc_attr(Settings::LANE_OPTION); ?>" value="<?php echo esc_attr(Settings::lane()); ?>"></td>
                     </tr>
                     <tr>
+                        <th scope="row"><label for="discussionbridge_service_author"><?php echo esc_html__('From Discourse service author', 'discussionbridge'); ?></label></th>
+                        <td><input class="regular-text" type="text" id="discussionbridge_service_author" name="<?php echo esc_attr(Settings::SERVICE_AUTHOR_OPTION); ?>" value="<?php echo esc_attr(Settings::service_author_username()); ?>" autocomplete="off" required><p class="description"><?php echo esc_html__('Existing WordPress user that locally owns materialized posts. The original Discourse author remains separately visible as source provenance.', 'discussionbridge'); ?></p></td>
+                    </tr>
+                    <tr>
                         <th scope="row"><?php echo esc_html__('Published post types', 'discussionbridge'); ?></th>
                         <td>
                             <?php foreach ($post_types as $post_type) : if ($post_type->name === 'attachment') { continue; } ?>

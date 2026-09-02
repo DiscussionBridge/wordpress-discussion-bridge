@@ -12,6 +12,7 @@ final class Settings
     public const LANE_OPTION = 'discussionbridge_lane';
     public const POST_TYPES_OPTION = 'discussionbridge_post_types';
     public const COMMENTS_MODE_OPTION = 'discussionbridge_comments_mode';
+    public const SERVICE_AUTHOR_OPTION = 'discussionbridge_service_author';
 
     public static function register(): void
     {
@@ -39,6 +40,11 @@ final class Settings
             'type' => 'string',
             'sanitize_callback' => [self::class, 'sanitize_comments_mode'],
             'default' => 'fullInteractive',
+        ]);
+        register_setting('discussionbridge', self::SERVICE_AUTHOR_OPTION, [
+            'type' => 'string',
+            'sanitize_callback' => [self::class, 'sanitize_service_author'],
+            'default' => '',
         ]);
     }
 
@@ -97,6 +103,21 @@ final class Settings
     public static function comments_mode(): string
     {
         return self::sanitize_comments_mode(get_option(self::COMMENTS_MODE_OPTION, 'fullInteractive'));
+    }
+
+    public static function service_author_username(): string
+    {
+        $value = defined('DISCUSSIONBRIDGE_SERVICE_AUTHOR')
+            ? (string) constant('DISCUSSIONBRIDGE_SERVICE_AUTHOR')
+            : (string) get_option(self::SERVICE_AUTHOR_OPTION, '');
+        return self::sanitize_service_author($value);
+    }
+
+    public static function service_author_id(): int
+    {
+        $username = self::service_author_username();
+        $user = $username !== '' ? get_user_by('login', $username) : false;
+        return $user instanceof \WP_User && user_can($user, 'publish_posts') ? (int) $user->ID : 0;
     }
 
     /** @return list<string> */
@@ -190,6 +211,20 @@ final class Settings
         }
         add_settings_error(self::COMMENTS_MODE_OPTION, 'invalid_comments_mode', 'DiscussionBridge discussion mode is invalid.');
         return 'fullInteractive';
+    }
+
+    public static function sanitize_service_author(mixed $value): string
+    {
+        $username = sanitize_user(trim((string) $value), true);
+        if ($username === '') {
+            return '';
+        }
+        $user = get_user_by('login', $username);
+        if (!$user instanceof \WP_User || !user_can($user, 'publish_posts')) {
+            add_settings_error(self::SERVICE_AUTHOR_OPTION, 'invalid_service_author', 'DiscussionBridge service author must be an existing WordPress user allowed to publish posts.');
+            return '';
+        }
+        return $user->user_login;
     }
 
     /** @return list<string> */

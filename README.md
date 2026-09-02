@@ -51,12 +51,18 @@ protected server constants for credentials:
 define('DISCUSSIONBRIDGE_SERVER_URL', 'https://forum.example');
 define('DISCUSSIONBRIDGE_CONNECTION_ID', 'dbc_000000000000000000000000');
 define('DISCUSSIONBRIDGE_CONNECTION_SECRET_FILE', '/run/secrets/discussionbridge-wordpress');
+define('DISCUSSIONBRIDGE_SERVICE_AUTHOR', 'discussionbridge');
 ```
 
 The secret file must be outside the webroot and readable only by the PHP-FPM
 application identity. The secret is never stored in WordPress options and must
 never be exposed to browsers, themes, public REST responses, URLs, content, or
 logs.
+
+The service author must be an existing WordPress user allowed to publish posts.
+It owns locally materialized posts; the transported Discourse author, topic and
+revision remain separately visible as source provenance. This does not imply
+user or login synchronization.
 
 WP Discourse is a separate plugin. For the Alpha demonstration its automatic
 publication and comments paths must remain disabled so one WordPress lifecycle

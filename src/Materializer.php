@@ -77,6 +77,11 @@ final class Materializer
             return new WP_Error('discussionbridge_materialization_path', 'The first WordPress publisher profile requires one post slug.');
         }
         $creating = $post_id === 0;
+        $service_author_id = Settings::service_author_id();
+        if ($service_author_id <= 0) {
+            return new WP_Error('discussionbridge_materialization_service_author', 'A valid WordPress service author is required before materialization.');
+        }
+        $content .= self::source_provenance($source, (string) $record['topic_url']);
         $postarr = [
             'ID' => $post_id,
             'post_type' => Settings::post_types()[0],
@@ -84,10 +89,8 @@ final class Materializer
             'post_name' => sanitize_title($path),
             'post_title' => $title,
             'post_content' => $content,
+            'post_author' => $service_author_id,
         ];
-        if ($creating) {
-            $postarr['post_author'] = max(1, get_current_user_id());
-        }
         $saved = wp_insert_post($postarr, true);
         if (is_wp_error($saved)) {
             return $saved;
@@ -202,5 +205,19 @@ final class Materializer
             }
         }
         return false;
+    }
+
+    /** @param array<string,mixed> $source */
+    private static function source_provenance(array $source, string $topic_url): string
+    {
+        $author = $source['author'];
+        $profile = esc_url((string) $author['profile_url']);
+        $name = esc_html((string) $author['name']);
+        $author_markup = $profile !== '' ? '<a href="' . $profile . '">' . $name . '</a>' : $name;
+        return '<hr><aside class="discussionbridge-publication"><p><strong>Published from <a href="'
+            . esc_url($topic_url) . '">The Bridge</a></strong></p><p>Source author: '
+            . $author_markup . ' · Revision ' . esc_html((string) $source['revision'])
+            . ' · DiscussionBridge for WordPress ' . esc_html(DISCUSSIONBRIDGE_WORDPRESS_VERSION)
+            . '</p></aside>';
     }
 }
