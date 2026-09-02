@@ -105,6 +105,22 @@ test('materialization uses configured local owner and visible source provenance'
     expect(Materializer::materialize(valid_record()) === 'unchanged');
 });
 
+test('same-revision materialization repairs a legacy authorless post without changing identity', function (): void {
+    dbt_reset(); $record = valid_record();
+    expect(Materializer::materialize($record) === 'created');
+    $GLOBALS['dbt']['posts'][100]->post_author = 0;
+    $GLOBALS['dbt']['posts'][100]->post_content = '<p>Legacy imported body without current provenance.</p>';
+    $before_resource = get_post_meta(100, '_discussionbridge_resource_id', true);
+    $before_url = get_post_meta(100, '_discussionbridge_canonical_url', true);
+    expect(Materializer::materialize($record) === 'updated');
+    expect(count($GLOBALS['dbt']['posts']) === 1, 'repair created a duplicate post');
+    expect($GLOBALS['dbt']['posts'][100]->post_author === 7, 'repair did not apply configured service author');
+    expect(get_post_meta(100, '_discussionbridge_resource_id', true) === $before_resource);
+    expect(get_post_meta(100, '_discussionbridge_canonical_url', true) === $before_url);
+    expect(str_contains($GLOBALS['dbt']['posts'][100]->post_content, 'Source author:'));
+    expect(Materializer::materialize($record) === 'unchanged');
+});
+
 test('materialization fails closed on missing author, collision and identity drift', function (): void {
     dbt_reset(); unset($GLOBALS['dbt']['options'][Settings::SERVICE_AUTHOR_OPTION]);
     expect_error(Materializer::materialize(valid_record()), 'discussionbridge_materialization_service_author');

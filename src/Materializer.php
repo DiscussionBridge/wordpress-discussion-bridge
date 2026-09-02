@@ -49,6 +49,11 @@ final class Materializer
             return $validated;
         }
         [$resource_id, $revision, $canonical_url, $title, $content, $source] = $validated;
+        $service_author_id = Settings::service_author_id();
+        if ($service_author_id <= 0) {
+            return new WP_Error('discussionbridge_materialization_service_author', 'A valid WordPress service author is required before materialization.');
+        }
+        $materialized_content = $content . self::source_provenance($source, (string) $record['topic_url']);
         $existing = get_posts([
             'post_type' => Settings::post_types(),
             'post_status' => ['publish', 'draft', 'private'],
@@ -65,7 +70,11 @@ final class Materializer
             if ((string) get_post_meta($post_id, self::META_PREFIX . 'canonical_url', true) !== $canonical_url) {
                 return new WP_Error('discussionbridge_materialization_identity_drift', 'The Bridge Record canonical URL changed.');
             }
-            if ((string) get_post_meta($post_id, self::META_PREFIX . 'source_revision', true) === $revision) {
+            $post = get_post($post_id);
+            if ((string) get_post_meta($post_id, self::META_PREFIX . 'source_revision', true) === $revision
+                && $post instanceof \WP_Post
+                && (int) $post->post_author === $service_author_id
+                && (string) $post->post_content === $materialized_content) {
                 return 'unchanged';
             }
         } elseif (url_to_postid($canonical_url) > 0) {
@@ -77,18 +86,13 @@ final class Materializer
             return new WP_Error('discussionbridge_materialization_path', 'The first WordPress publisher profile requires one post slug.');
         }
         $creating = $post_id === 0;
-        $service_author_id = Settings::service_author_id();
-        if ($service_author_id <= 0) {
-            return new WP_Error('discussionbridge_materialization_service_author', 'A valid WordPress service author is required before materialization.');
-        }
-        $content .= self::source_provenance($source, (string) $record['topic_url']);
         $postarr = [
             'ID' => $post_id,
             'post_type' => Settings::post_types()[0],
             'post_status' => $creating ? 'draft' : 'publish',
             'post_name' => sanitize_title($path),
             'post_title' => $title,
-            'post_content' => $content,
+            'post_content' => $materialized_content,
             'post_author' => $service_author_id,
         ];
         $saved = wp_insert_post($postarr, true);
