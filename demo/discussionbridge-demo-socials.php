@@ -14,7 +14,7 @@ CSS);
 });
 
 add_action('wp_footer', static function (): void {
-    $sprite = plugins_url('assets/discussionbridge-social-icons.svg', WP_PLUGIN_DIR . '/wordpress-discussion-bridge/wordpress-discussion-bridge.php');
+    $sprite = WPMU_PLUGIN_URL . '/discussionbridge-social-icons.svg';
     $links = [
         ['forum', 'DiscussionBridge forum', 'https://forum.discussionbridge.dev/'],
         ['bluesky', 'DiscussionBridge on Bluesky', 'https://bsky.app/profile/discussionbridge.bsky.social'],
