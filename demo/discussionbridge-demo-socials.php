@@ -17,11 +17,12 @@ add_action('wp_footer', static function (): void {
     $sprite = WPMU_PLUGIN_URL . '/discussionbridge-social-icons.svg';
     $links = [
         ['forum', 'DiscussionBridge forum', 'https://forum.discussionbridge.dev/'],
+        ['github', 'DiscussionBridge on GitHub', 'https://github.com/DiscussionBridge'],
         ['bluesky', 'DiscussionBridge on Bluesky', 'https://bsky.app/profile/discussionbridge.bsky.social'],
         ['discord', 'DiscussionBridge on Discord', 'https://discord.gg/Y7SRQAxKq'],
         ['mastodon', 'DiscussionBridge on Mastodon', 'https://mastodon.social/@DiscussionBridge'],
         ['reddit', 'DiscussionBridge on Reddit', 'https://www.reddit.com/r/DiscussionBridge/'],
-        ['x', 'DiscussionBridge on X', '#'],
+        ['x', 'DiscussionBridge on X', 'https://x.com/DiscussBridge'],
         ['youtube', 'DiscussionBridge on YouTube', 'https://www.youtube.com/@DiscussionBridge'],
     ];
     echo '<aside class="discussionbridge-demo-socials"><nav class="discussionbridge-demo-socials__links" aria-label="DiscussionBridge community and social links">';
