@@ -18,8 +18,11 @@ final class Materializer
         $totals = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'failed' => 0];
         $client = new Client();
         $expected_pages = null;
+        $expected_total = null;
+        $snapshot = null;
+        $seen_resources = [];
         for ($page = 1; $page <= self::MAX_PAGES; $page++) {
-            $payload = $client->records($page);
+            $payload = $client->records($page, $snapshot);
             if (is_wp_error($payload) || !isset($payload['bridge_records'], $payload['pagination'])
                 || !is_array($payload['bridge_records']) || !is_array($payload['pagination'])) {
                 $totals['failed']++;
@@ -27,14 +30,28 @@ final class Materializer
             }
             $reported_page = $payload['pagination']['page'] ?? null;
             $pages = $payload['pagination']['pages'] ?? null;
+            $total = $payload['pagination']['total'] ?? null;
+            $reported_snapshot = $payload['pagination']['snapshot'] ?? null;
             if (!is_int($reported_page) || $reported_page !== $page || !is_int($pages)
                 || $pages < 1 || $pages > self::MAX_PAGES
-                || ($expected_pages !== null && $pages !== $expected_pages)) {
+                || !is_int($total) || $total < 0 || !is_string($reported_snapshot)
+                || $reported_snapshot === '' || strlen($reported_snapshot) > 8192
+                || ($expected_pages !== null && $pages !== $expected_pages)
+                || ($expected_total !== null && $total !== $expected_total)
+                || ($snapshot !== null && $reported_snapshot !== $snapshot)) {
                 $totals['failed']++;
                 break;
             }
             $expected_pages ??= $pages;
+            $expected_total ??= $total;
+            $snapshot ??= $reported_snapshot;
             foreach ($payload['bridge_records'] as $record) {
+                $resource_id = is_array($record) ? strtolower((string) ($record['resource_id'] ?? '')) : '';
+                if (!wp_is_uuid($resource_id) || isset($seen_resources[$resource_id])) {
+                    $totals['failed']++;
+                    break 2;
+                }
+                $seen_resources[$resource_id] = true;
                 if (!is_array($record) || ($record['direction'] ?? null) !== 'from_discourse'
                     || !self::native_materialization_authorized($record)) {
                     continue;
@@ -45,6 +62,9 @@ final class Materializer
             if ($page >= $pages) {
                 break;
             }
+        }
+        if ($expected_total !== null && count($seen_resources) !== $expected_total) {
+            $totals['failed']++;
         }
         return $totals;
     }

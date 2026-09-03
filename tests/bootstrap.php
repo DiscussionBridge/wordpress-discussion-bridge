@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.1.0-alpha.16';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.1.0-alpha.17';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error

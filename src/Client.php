@@ -34,12 +34,19 @@ final class Client
     }
 
     /** @return array<string, mixed>|WP_Error */
-    public function records(int $page = 1): array|WP_Error
+    public function records(int $page = 1, ?string $snapshot = null): array|WP_Error
     {
         if ($page < 1 || $page > 10000) {
             return new WP_Error('discussionbridge_invalid_page', 'The DiscussionBridge record page is invalid.');
         }
-        return $this->request('GET', '/discussion-bridge/v1/bridge-records.json?page=' . $page);
+        if ($snapshot !== null && ($snapshot === '' || strlen($snapshot) > 8192)) {
+            return new WP_Error('discussionbridge_invalid_snapshot', 'The DiscussionBridge record snapshot is invalid.');
+        }
+        $query = ['page' => $page];
+        if ($snapshot !== null) {
+            $query['snapshot'] = $snapshot;
+        }
+        return $this->request('GET', '/discussion-bridge/v1/bridge-records.json?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986));
     }
 
     /** @return array<string, mixed>|WP_Error */

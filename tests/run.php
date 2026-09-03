@@ -149,10 +149,10 @@ test('materialization never reports success when WordPress cannot publish the dr
 test('publication sync completes page 101 and rejects inconsistent pagination', function (): void {
     dbt_reset();
     for ($page = 1; $page <= 101; $page++) {
-        $url = 'https://bridge.example/discussion-bridge/v1/bridge-records.json?page=' . $page;
+        $url = 'https://bridge.example/discussion-bridge/v1/bridge-records.json?page=' . $page . ($page > 1 ? '&snapshot=snap' : '');
         $GLOBALS['dbt']['responses'][$url] = dbt_response(200, [
             'bridge_records' => [],
-            'pagination' => ['page' => $page, 'pages' => 101],
+            'pagination' => ['page' => $page, 'pages' => 101, 'total' => 0, 'snapshot' => 'snap'],
         ]);
     }
     $totals = Materializer::sync();
@@ -161,10 +161,10 @@ test('publication sync completes page 101 and rejects inconsistent pagination', 
 
     dbt_reset();
     foreach ([1 => 2, 2 => 3] as $page => $pages) {
-        $url = 'https://bridge.example/discussion-bridge/v1/bridge-records.json?page=' . $page;
+        $url = 'https://bridge.example/discussion-bridge/v1/bridge-records.json?page=' . $page . ($page > 1 ? '&snapshot=snap' : '');
         $GLOBALS['dbt']['responses'][$url] = dbt_response(200, [
             'bridge_records' => [],
-            'pagination' => ['page' => $page, 'pages' => $pages],
+            'pagination' => ['page' => $page, 'pages' => $pages, 'total' => 0, 'snapshot' => 'snap'],
         ]);
     }
     $totals = Materializer::sync();
