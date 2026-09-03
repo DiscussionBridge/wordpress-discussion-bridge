@@ -133,6 +133,44 @@ test('materialization fails closed on missing author, collision and identity dri
     expect_error(Materializer::materialize($record), 'discussionbridge_materialization_identity_drift');
 });
 
+test('materialization never reports success when WordPress cannot publish the draft', function (): void {
+    dbt_reset();
+    $GLOBALS['dbt']['wp_update_callback'] = fn(array $data): WP_Error => new WP_Error('publish_failed', 'publish failed');
+    expect_error(Materializer::materialize(valid_record()), 'publish_failed');
+    expect($GLOBALS['dbt']['posts'] === [], 'failed materialization retained an unowned draft');
+    expect($GLOBALS['dbt']['meta'] === [], 'failed materialization wrote healthy metadata');
+
+    dbt_reset();
+    $GLOBALS['dbt']['wp_update_callback'] = fn(array $data): int => (int) $data['ID'];
+    expect_error(Materializer::materialize(valid_record()), 'discussionbridge_materialization_publish');
+    expect($GLOBALS['dbt']['posts'] === [], 'unpublished materialization retained a draft');
+});
+
+test('publication sync completes page 101 and rejects inconsistent pagination', function (): void {
+    dbt_reset();
+    for ($page = 1; $page <= 101; $page++) {
+        $url = 'https://bridge.example/discussion-bridge/v1/bridge-records.json?page=' . $page;
+        $GLOBALS['dbt']['responses'][$url] = dbt_response(200, [
+            'bridge_records' => [],
+            'pagination' => ['page' => $page, 'pages' => 101],
+        ]);
+    }
+    $totals = Materializer::sync();
+    expect($totals['failed'] === 0, 'valid page 101 was rejected');
+    expect(count($GLOBALS['dbt']['requests']) === 101, 'publication feed was truncated before page 101');
+
+    dbt_reset();
+    foreach ([1 => 2, 2 => 3] as $page => $pages) {
+        $url = 'https://bridge.example/discussion-bridge/v1/bridge-records.json?page=' . $page;
+        $GLOBALS['dbt']['responses'][$url] = dbt_response(200, [
+            'bridge_records' => [],
+            'pagination' => ['page' => $page, 'pages' => $pages],
+        ]);
+    }
+    $totals = Materializer::sync();
+    expect($totals['failed'] === 1, 'inconsistent pagination was accepted');
+});
+
 test('block and shortcode render sanitized credential-free From Discourse content', function (): void {
     dbt_reset(); $record = valid_record();
     $url = 'https://bridge.example/discussion-bridge/v1/bridge-records/' . $record['resource_id'] . '.json';
@@ -167,6 +205,16 @@ test('activation and boot are idempotent and do not expose a secret option', fun
     Plugin::boot();
     expect(count($GLOBALS['dbt']['actions']) >= 8 && count($GLOBALS['dbt']['filters']) >= 3);
     foreach (array_keys($GLOBALS['dbt']['options']) as $key) expect(!str_contains($key, 'secret'));
+});
+
+test('connection secret and lane match the receiver admission grammar', function (): void {
+    expect(Settings::sanitize_lane('articles') === 'articles', 'valid lane rejected');
+    expect(Settings::sanitize_lane('Bad Lane') === '', 'invalid lane accepted');
+    $validator = new ReflectionMethod(Settings::class, 'validated_secret');
+    expect($validator->invoke(null, str_repeat('s', 31)) === '', 'short secret accepted');
+    expect($validator->invoke(null, str_repeat('é', 129)) === '', 'oversized byte secret accepted');
+    expect($validator->invoke(null, str_repeat('s', 32)."\ninside") === '', 'control-bearing secret accepted');
+    expect($validator->invoke(null, str_repeat('s', 32)) === str_repeat('s', 32), 'valid secret rejected');
 });
 
 // Test-only protected secret source. It is never an option or rendered value.

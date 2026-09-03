@@ -10,13 +10,14 @@ final class Materializer
 {
     public const IMPORTED_META = '_discussionbridge_imported_from_discourse';
     private const META_PREFIX = '_discussionbridge_';
-    private const MAX_PAGES = 100;
+    private const MAX_PAGES = 10000;
 
     /** @return array{created:int,updated:int,unchanged:int,failed:int} */
     public static function sync(): array
     {
         $totals = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'failed' => 0];
         $client = new Client();
+        $expected_pages = null;
         for ($page = 1; $page <= self::MAX_PAGES; $page++) {
             $payload = $client->records($page);
             if (is_wp_error($payload) || !isset($payload['bridge_records'], $payload['pagination'])
@@ -24,6 +25,15 @@ final class Materializer
                 $totals['failed']++;
                 break;
             }
+            $reported_page = $payload['pagination']['page'] ?? null;
+            $pages = $payload['pagination']['pages'] ?? null;
+            if (!is_int($reported_page) || $reported_page !== $page || !is_int($pages)
+                || $pages < 1 || $pages > self::MAX_PAGES
+                || ($expected_pages !== null && $pages !== $expected_pages)) {
+                $totals['failed']++;
+                break;
+            }
+            $expected_pages ??= $pages;
             foreach ($payload['bridge_records'] as $record) {
                 if (!is_array($record) || ($record['direction'] ?? null) !== 'from_discourse'
                     || !self::native_materialization_authorized($record)) {
@@ -32,9 +42,7 @@ final class Materializer
                 $result = self::materialize($record);
                 $totals[is_wp_error($result) ? 'failed' : $result]++;
             }
-            $pages = isset($payload['pagination']['pages']) && is_int($payload['pagination']['pages'])
-                ? $payload['pagination']['pages'] : 0;
-            if ($pages < 1 || $pages > self::MAX_PAGES || $page >= $pages) {
+            if ($page >= $pages) {
                 break;
             }
         }
@@ -101,7 +109,24 @@ final class Materializer
         }
         $post_id = (int) $saved;
         if ($creating) {
-            wp_update_post(['ID' => $post_id, 'post_status' => 'publish']);
+            $published = wp_update_post(['ID' => $post_id, 'post_status' => 'publish']);
+            if (is_wp_error($published) || (int) $published !== $post_id) {
+                wp_delete_post($post_id, true);
+                return is_wp_error($published) ? $published : new WP_Error(
+                    'discussionbridge_materialization_publish',
+                    'WordPress did not confirm the materialized post publication.',
+                );
+            }
+        }
+        $persisted = get_post($post_id);
+        if (!$persisted instanceof \WP_Post || $persisted->post_status !== 'publish') {
+            if ($creating) {
+                wp_delete_post($post_id, true);
+            }
+            return new WP_Error(
+                'discussionbridge_materialization_publish',
+                'The materialized WordPress post is not published.',
+            );
         }
         if (untrailingslashit((string) get_permalink($post_id)) !== untrailingslashit($canonical_url)) {
             if ($creating) {

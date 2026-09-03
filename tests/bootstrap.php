@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.1.0-alpha.15';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.1.0-alpha.16';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error
@@ -60,7 +60,7 @@ function dbt_reset(): void
         'transients' => [], 'actions' => [], 'filters' => [], 'styles' => [], 'scripts' => [],
         'settings_errors' => [], 'inserted' => [], 'deleted' => [], 'next_post_id' => 100,
         'queried_id' => 0, 'is_admin' => false, 'is_singular' => true, 'in_loop' => true,
-        'main_query' => true, 'uuid_counter' => 1,
+        'main_query' => true, 'uuid_counter' => 1, 'wp_update_callback' => null,
     ];
 }
 
@@ -105,7 +105,7 @@ function dbt_response(int $status, mixed $body, string $content_type = 'applicat
 function get_posts(array $args): array { if (($args['fields'] ?? '') === 'ids' && isset($args['meta_key'])) { $ids = []; foreach ($GLOBALS['dbt']['meta'] as $id => $meta) if (($meta[$args['meta_key']] ?? null) === ($args['meta_value'] ?? null)) $ids[] = $id; return array_slice($ids, 0, (int) ($args['posts_per_page'] ?? 5)); } return array_values($GLOBALS['dbt']['posts']); }
 function url_to_postid(string $url): int { foreach ($GLOBALS['dbt']['posts'] as $post) if (get_permalink($post) === $url) return $post->ID; return 0; }
 function wp_insert_post(array $data, bool $wp_error = false): int|WP_Error { unset($wp_error); $id = (int) ($data['ID'] ?: $GLOBALS['dbt']['next_post_id']++); $post = $GLOBALS['dbt']['posts'][$id] ?? new WP_Post($id); foreach (['post_type','post_status','post_name','post_title','post_content','post_author'] as $key) if (array_key_exists($key, $data)) $post->{$key} = $data[$key]; $GLOBALS['dbt']['posts'][$id] = $post; $GLOBALS['dbt']['inserted'][] = $data; return $id; }
-function wp_update_post(array $data): int|WP_Error { return wp_insert_post($data, true); }
+function wp_update_post(array $data): int|WP_Error { $callback = $GLOBALS['dbt']['wp_update_callback']; return is_callable($callback) ? $callback($data) : wp_insert_post($data, true); }
 function wp_delete_post(int $id, bool $force = false): WP_Post|false { unset($force); $post = $GLOBALS['dbt']['posts'][$id] ?? false; unset($GLOBALS['dbt']['posts'][$id], $GLOBALS['dbt']['meta'][$id]); $GLOBALS['dbt']['deleted'][] = $id; return $post; }
 function clean_post_cache(int $id): void {}
 function untrailingslashit(string $value): string { return rtrim($value, '/'); }

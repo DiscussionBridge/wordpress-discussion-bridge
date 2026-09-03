@@ -196,7 +196,7 @@ final class Settings
     public static function sanitize_lane(mixed $value): string
     {
         $value = trim((string) $value);
-        if ($value === '' || (strlen($value) <= 64 && preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]*$/', $value) === 1)) {
+        if ($value === '' || preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $value) === 1) {
             return $value;
         }
         add_settings_error(self::LANE_OPTION, 'invalid_lane', 'DiscussionBridge lane is invalid.');
