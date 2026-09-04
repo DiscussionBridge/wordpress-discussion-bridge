@@ -1,5 +1,9 @@
 # DiscussionBridge for WordPress
 
+```sh
+git clone https://github.com/DiscussionBridge/wordpress-discussion-bridge.git
+```
+
 This native WordPress plugin connects one WordPress installation to one
 independently scoped Content Connection in the generic DiscussionBridge
 Discourse plugin.
