@@ -26,7 +26,7 @@ The WordPress plugin retrieves the record on the server, validates its identity 
 {"direction":"from_discourse","presentation":"wordpress","discussion":"same_topic"}
 ```
 
-The imported first post appears once in WordPress. The fullInteractive frame below it contains this topic's replies and controls without repeating the source post.
+The imported first post appears once in WordPress. The Interactive frame below it contains this topic's replies and controls without repeating the source post.
 
 ## Continue where readers are
 

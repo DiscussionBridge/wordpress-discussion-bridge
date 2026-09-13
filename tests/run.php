@@ -37,6 +37,14 @@ test('package, plugin, block and asset versions agree', function (): void {
     expect(($asset['version'] ?? null) === DISCUSSIONBRIDGE_WORDPRESS_VERSION);
 });
 
+test('discussion mode emits Interactive and accepts the historical token', function (): void {
+    dbt_reset();
+    expect(Settings::sanitize_comments_mode('interactive') === 'interactive');
+    expect(Settings::sanitize_comments_mode('fullInteractive') === 'interactive');
+    expect(Settings::comments_mode() === 'interactive');
+    expect(Settings::sanitize_comments_mode('bridge') === 'interactive');
+});
+
 test('service author must exist and be able to publish', function (): void {
     dbt_reset();
     expect(Settings::service_author_id() === 7);
@@ -102,6 +110,7 @@ test('materialization uses configured local owner and visible source provenance'
     expect(str_contains($post->post_content, 'Phil'));
     expect(str_contains($post->post_content, 'post:99:version:3'));
     expect(!str_contains($post->post_content, '<script>'));
+    expect(get_post_meta(100, Presentation::COMMENTS_MODE_META, true) === 'interactive');
     expect(Materializer::materialize(valid_record()) === 'unchanged');
 });
 
@@ -180,6 +189,15 @@ test('block and shortcode render sanitized credential-free From Discourse conten
     expect($block === $shortcode && str_contains($block, 'Safe body'));
     expect(!str_contains($block, '<script>') && !str_contains($block, str_repeat('s', 40)));
     expect(str_contains((string) json_encode($GLOBALS['dbt']['requests']), str_repeat('s', 40)), 'authenticated request omitted protected header');
+});
+
+test('historical block mode renders through the canonical Interactive class', function (): void {
+    dbt_reset(); $record = valid_record();
+    $url = 'https://bridge.example/discussion-bridge/v1/bridge-records/' . $record['resource_id'] . '.json';
+    $GLOBALS['dbt']['responses'][$url] = dbt_response(200, ['bridge_record' => $record]);
+    $html = Presentation::render_block(['resourceId' => $record['resource_id'], 'commentsMode' => 'fullInteractive']);
+    expect(str_contains($html, 'discussionbridge-record--interactive'));
+    expect(!str_contains($html, 'discussionbridge-record--fullInteractive'));
 });
 
 test('Simple mode batches missing replies and exposes bounded Show more', function (): void {

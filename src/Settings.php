@@ -39,7 +39,7 @@ final class Settings
         register_setting('discussionbridge', self::COMMENTS_MODE_OPTION, [
             'type' => 'string',
             'sanitize_callback' => [self::class, 'sanitize_comments_mode'],
-            'default' => 'fullInteractive',
+            'default' => 'interactive',
         ]);
         register_setting('discussionbridge', self::SERVICE_AUTHOR_OPTION, [
             'type' => 'string',
@@ -102,7 +102,7 @@ final class Settings
 
     public static function comments_mode(): string
     {
-        return self::sanitize_comments_mode(get_option(self::COMMENTS_MODE_OPTION, 'fullInteractive'));
+        return self::sanitize_comments_mode(get_option(self::COMMENTS_MODE_OPTION, 'interactive'));
     }
 
     public static function service_author_username(): string
@@ -206,11 +206,14 @@ final class Settings
     public static function sanitize_comments_mode(mixed $value): string
     {
         $value = (string) $value;
-        if (in_array($value, ['none', 'simple', 'full', 'fullInteractive'], true)) {
+        if ($value === 'fullInteractive') {
+            return 'interactive';
+        }
+        if (in_array($value, ['none', 'simple', 'full', 'interactive'], true)) {
             return $value;
         }
         add_settings_error(self::COMMENTS_MODE_OPTION, 'invalid_comments_mode', 'DiscussionBridge discussion mode is invalid.');
-        return 'fullInteractive';
+        return 'interactive';
     }
 
     public static function sanitize_service_author(mixed $value): string

@@ -29,20 +29,20 @@ Current Alpha slice:
   Older presentation-only records are never treated as publication authority;
 - provides the native dynamic `DiscussionBridge / From Discourse` block and a
   compatibility
-  `[discussionbridge_record resource_id="…" comments="fullInteractive"]`
+  `[discussionbridge_record resource_id="…" comments="interactive"]`
   shortcode, both rendered server-side with a bounded cache. The block exposes
   the same discussion-mode choice in the editor;
 - offers `none`, native plugin-free `simple`, standard plugin-free `full`, and DiscussionBridge
-  `fullInteractive` presentation per published post, with a site default;
+  `Interactive` presentation per published post, with a site default;
 - renders Simple as sanitized native reply cards, five initially with a
   **Show more comments** disclosure, fetching at most 50 replies in bounded
   server-side batches before continuing on The Bridge;
 - appends the exact mapped To Discourse discussion to the original published
-  post. `fullInteractive` uses the shared 800px bounded viewport with internal
+  post. `Interactive` uses the shared 800px bounded viewport with internal
   scrolling; Discourse retains ownership of sessions, replies, composer,
   moderation, and interaction; and
 - renders a From Discourse first post once in WordPress and, when
-  `fullInteractive` is selected, presents that same topic's replies below it
+  `Interactive` is selected, presents that same topic's replies below it
   without duplicating the first post in the frame; and
 - builds a credential-free **On this page** navigation from two or more `h2` or
   `h3` headings in either WordPress-authored or From Discourse content.

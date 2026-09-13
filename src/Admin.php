@@ -46,7 +46,8 @@ final class Admin
     {
         wp_nonce_field('discussionbridge_post_' . $post->ID, 'discussionbridge_post_nonce');
         $enabled = get_post_meta($post->ID, Publisher::ENABLED_META, true) === '1';
-        $comments_mode = (string) get_post_meta($post->ID, Presentation::COMMENTS_MODE_META, true);
+        $stored_comments_mode = (string) get_post_meta($post->ID, Presentation::COMMENTS_MODE_META, true);
+        $comments_mode = $stored_comments_mode === '' ? '' : Settings::sanitize_comments_mode($stored_comments_mode);
         ?>
         <label><input type="checkbox" name="discussionbridge_enabled" value="1" <?php checked($enabled); ?>> <?php echo esc_html__('Create or retain this post’s DiscussionBridge record when it is first published.', 'discussionbridge'); ?></label>
         <p class="description"><?php echo esc_html__('Later edits do not rewrite the Discourse topic. Use the status page for an exact retry.', 'discussionbridge'); ?></p>
@@ -56,7 +57,7 @@ final class Admin
             <option value="none" <?php selected($comments_mode, 'none'); ?>><?php echo esc_html__('No discussion', 'discussionbridge'); ?></option>
             <option value="simple" <?php selected($comments_mode, 'simple'); ?>><?php echo esc_html__('Simple comments', 'discussionbridge'); ?></option>
             <option value="full" <?php selected($comments_mode, 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
-            <option value="fullInteractive" <?php selected($comments_mode, 'fullInteractive'); ?>><?php echo esc_html__('DiscussionBridge fullInteractive', 'discussionbridge'); ?></option>
+            <option value="interactive" <?php selected($comments_mode, 'interactive'); ?>><?php echo esc_html__('DiscussionBridge Interactive', 'discussionbridge'); ?></option>
         </select>
         <?php
     }
@@ -81,8 +82,8 @@ final class Admin
             : '';
         if ($comments_mode === '') {
             delete_post_meta($post_id, Presentation::COMMENTS_MODE_META);
-        } elseif (in_array($comments_mode, ['none', 'simple', 'full', 'fullInteractive'], true)) {
-            update_post_meta($post_id, Presentation::COMMENTS_MODE_META, $comments_mode);
+        } elseif (in_array($comments_mode, ['none', 'simple', 'full', 'interactive', 'fullInteractive'], true)) {
+            update_post_meta($post_id, Presentation::COMMENTS_MODE_META, Settings::sanitize_comments_mode($comments_mode));
         }
     }
 
@@ -118,7 +119,7 @@ final class Admin
                             <option value="none" <?php selected(Settings::comments_mode(), 'none'); ?>><?php echo esc_html__('No discussion', 'discussionbridge'); ?></option>
                             <option value="simple" <?php selected(Settings::comments_mode(), 'simple'); ?>><?php echo esc_html__('Simple comments', 'discussionbridge'); ?></option>
                             <option value="full" <?php selected(Settings::comments_mode(), 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
-                            <option value="fullInteractive" <?php selected(Settings::comments_mode(), 'fullInteractive'); ?>><?php echo esc_html__('DiscussionBridge fullInteractive', 'discussionbridge'); ?></option>
+                            <option value="interactive" <?php selected(Settings::comments_mode(), 'interactive'); ?>><?php echo esc_html__('DiscussionBridge Interactive', 'discussionbridge'); ?></option>
                         </select><p class="description"><?php echo esc_html__('Individual posts may inherit or override this setting.', 'discussionbridge'); ?></p></td>
                     </tr>
                     <tr>

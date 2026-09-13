@@ -33,14 +33,14 @@ final class Presentation
     {
         return self::render(
             (string) ($attributes['resourceId'] ?? ''),
-            self::valid_mode((string) ($attributes['commentsMode'] ?? 'fullInteractive'))
+            self::valid_mode((string) ($attributes['commentsMode'] ?? 'interactive'))
         );
     }
 
     public static function shortcode(array|string $attributes = []): string
     {
         $attributes = shortcode_atts(
-            ['resource_id' => '', 'comments' => 'fullInteractive'],
+            ['resource_id' => '', 'comments' => 'interactive'],
             is_array($attributes) ? $attributes : [],
             'discussionbridge_record'
         );
@@ -167,7 +167,7 @@ final class Presentation
             if ($comments_mode === 'simple') {
                 $discussion = self::render_simple($record['topic_id'], $record['topic_url'], false);
             } else {
-                self::enqueue_embed($record['topic_id'], $comments_mode, $comments_mode === 'fullInteractive');
+                self::enqueue_embed($record['topic_id'], $comments_mode, $comments_mode === 'interactive');
                 $discussion = sprintf(
                     '<div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>',
                     esc_html__('Discussion', 'discussionbridge'),
@@ -248,7 +248,7 @@ final class Presentation
 
     private static function valid_mode(string $value): string
     {
-        return in_array($value, ['none', 'simple', 'full', 'fullInteractive'], true) ? $value : 'fullInteractive';
+        return Settings::sanitize_comments_mode($value);
     }
 
     private static function render_simple(int $topic_id, string $topic_url, bool $include_credit = true): string
@@ -398,7 +398,7 @@ final class Presentation
             'discourseUrl' => Settings::server_url() . '/',
             'topicId' => $topic_id,
         ];
-        if ($mode === 'fullInteractive') {
+        if ($mode === 'interactive') {
             $configuration['fullApp'] = true;
             $configuration['dynamicHeight'] = false;
             if ($source_presentation) {

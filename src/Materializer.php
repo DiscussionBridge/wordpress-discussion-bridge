@@ -174,7 +174,7 @@ final class Materializer
         foreach ($meta as $key => $value) {
             update_post_meta($post_id, self::META_PREFIX . $key, $value);
         }
-        update_post_meta($post_id, Presentation::COMMENTS_MODE_META, 'fullInteractive');
+        update_post_meta($post_id, Presentation::COMMENTS_MODE_META, 'interactive');
         clean_post_cache($post_id);
         return $creating ? 'created' : 'updated';
     }

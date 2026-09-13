@@ -20,12 +20,12 @@
         }),
         element.createElement(components.SelectControl, {
           label: i18n.__("Discussion mode", "discussionbridge"),
-          value: props.attributes.commentsMode || "fullInteractive",
+          value: props.attributes.commentsMode === "fullInteractive" ? "interactive" : (props.attributes.commentsMode || "interactive"),
           options: [
             { label: i18n.__("No discussion", "discussionbridge"), value: "none" },
             { label: i18n.__("Simple comments", "discussionbridge"), value: "simple" },
             { label: i18n.__("Standard Discourse comments", "discussionbridge"), value: "full" },
-            { label: i18n.__("DiscussionBridge fullInteractive", "discussionbridge"), value: "fullInteractive" },
+            { label: i18n.__("DiscussionBridge Interactive", "discussionbridge"), value: "interactive" },
           ],
           onChange: function (value) {
             props.setAttributes({ commentsMode: value });

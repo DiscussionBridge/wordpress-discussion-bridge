@@ -15,7 +15,7 @@
     },
     "commentsMode": {
       "type": "string",
-      "default": "fullInteractive"
+      "default": "interactive"
     }
   },
   "supports": {
