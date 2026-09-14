@@ -104,8 +104,8 @@ test('delivery uses stable identity, protected header and validates success', fu
     $first = $GLOBALS['dbt']['requests'][0][1]; $second = $GLOBALS['dbt']['requests'][1][1];
     $a = json_decode($first['body'], true)['bridge_record']; $b = json_decode($second['body'], true)['bridge_record'];
     expect($a['external_id'] === $b['external_id'] && $a['canonical_url'] === $b['canonical_url']);
-    expect(($first['headers']['X-DiscussionBridge-Secret'] ?? '') === str_repeat('s', 40));
-    expect(!str_contains($first['body'], str_repeat('s', 40)), 'secret leaked into request body');
+    expect(($first['headers']['X-DiscussionBridge-Secret'] ?? '') === str_repeat('s', 43));
+    expect(!str_contains($first['body'], str_repeat('s', 43)), 'secret leaked into request body');
     expect(get_post_meta(1, '_discussionbridge_status', true) === 'healthy');
     $GLOBALS['dbt']['responses'][$url] = dbt_response(200, array_merge($success, ['core_fallback' => true]));
     Publisher::deliver(1);
@@ -206,8 +206,8 @@ test('block and shortcode render sanitized credential-free From Discourse conten
     $block = Presentation::render_block(['resourceId' => $record['resource_id'], 'commentsMode' => 'none']);
     $shortcode = Presentation::shortcode(['resource_id' => $record['resource_id'], 'comments' => 'none']);
     expect($block === $shortcode && str_contains($block, 'Safe body'));
-    expect(!str_contains($block, '<script>') && !str_contains($block, str_repeat('s', 40)));
-    expect(str_contains((string) json_encode($GLOBALS['dbt']['requests']), str_repeat('s', 40)), 'authenticated request omitted protected header');
+    expect(!str_contains($block, '<script>') && !str_contains($block, str_repeat('s', 43)));
+    expect(str_contains((string) json_encode($GLOBALS['dbt']['requests']), str_repeat('s', 43)), 'authenticated request omitted protected header');
 });
 
 test('historical block mode renders through the canonical Interactive class', function (): void {
@@ -246,13 +246,17 @@ test('activation and boot create only non-autoloaded encrypted credential storag
 
 test('admin credential storage encrypts, masks and preserves the connection secret', function (): void {
     dbt_reset();
-    $secret = str_repeat('w', 40);
+    $secret = str_repeat('w', 43);
     $encrypted = Settings::sanitize_connection_secret($secret);
     expect($encrypted !== '' && $encrypted !== $secret, 'secret was stored as plaintext');
     expect(str_starts_with($encrypted, 'v1:'), 'encrypted credential envelope is unversioned');
     $GLOBALS['dbt']['options'][Settings::CONNECTION_SECRET_OPTION] = $encrypted;
     $decrypt = new ReflectionMethod(Settings::class, 'decrypt_secret');
     expect($decrypt->invoke(null, $encrypted) === $secret, 'encrypted credential did not round trip');
+    expect(Settings::sanitize_connection_secret($encrypted) === $encrypted, 'repeated WordPress sanitizer pass re-encrypted the envelope');
+    $encrypt = new ReflectionMethod(Settings::class, 'encrypt_secret');
+    $legacy_double_encrypted = $encrypt->invoke(null, $encrypted);
+    expect($decrypt->invoke(null, $legacy_double_encrypted) === $secret, 'existing double-encrypted credential was not recovered');
     $tampered = substr($encrypted, 0, -1) . ($encrypted[-1] === 'A' ? 'B' : 'A');
     expect($decrypt->invoke(null, $tampered) === '', 'tampered credential did not fail closed');
     expect(Settings::sanitize_connection_secret('') === $encrypted, 'blank settings save erased the credential');
@@ -260,18 +264,27 @@ test('admin credential storage encrypts, masks and preserves the connection secr
     expect(!str_contains(file_get_contents(__DIR__ . '/../src/Admin.php'), 'value="<?php echo Settings::connection_secret'), 'admin field redisplays secret');
 });
 
+test('admin credential storage rejects copied panels and malformed secrets', function (): void {
+    dbt_reset();
+    $GLOBALS['dbt']['options'][Settings::CONNECTION_SECRET_OPTION] = 'retained-envelope';
+    $copied_panel = 'dbc_aaaaaaaaaaaaaaaaaaaaaaaa' . "\n" . str_repeat('s', 43);
+    expect(Settings::sanitize_connection_secret($copied_panel) === 'retained-envelope');
+    expect(Settings::sanitize_connection_secret(str_repeat('s', 42)) === 'retained-envelope');
+    expect(count($GLOBALS['dbt']['settings_errors']) === 2, 'malformed secret errors were not reported');
+});
+
 test('connection secret and lane match the receiver admission grammar', function (): void {
     expect(Settings::sanitize_lane('articles') === 'articles', 'valid lane rejected');
     expect(Settings::sanitize_lane('Bad Lane') === '', 'invalid lane accepted');
     $validator = new ReflectionMethod(Settings::class, 'validated_secret');
-    expect($validator->invoke(null, str_repeat('s', 31)) === '', 'short secret accepted');
+    expect($validator->invoke(null, str_repeat('s', 42)) === '', 'short secret accepted');
     expect($validator->invoke(null, str_repeat('é', 129)) === '', 'oversized byte secret accepted');
-    expect($validator->invoke(null, str_repeat('s', 32)."\ninside") === '', 'control-bearing secret accepted');
-    expect($validator->invoke(null, str_repeat('s', 32)) === str_repeat('s', 32), 'valid secret rejected');
+    expect($validator->invoke(null, str_repeat('s', 43)."\ninside") === '', 'control-bearing secret accepted');
+    expect($validator->invoke(null, str_repeat('s', 43)) === str_repeat('s', 43), 'valid secret rejected');
 });
 
 // Test-only protected secret source. It is never an option or rendered value.
-define('DISCUSSIONBRIDGE_CONNECTION_SECRET', str_repeat('s', 40));
+define('DISCUSSIONBRIDGE_CONNECTION_SECRET', str_repeat('s', 43));
 
 $passed = 0;
 foreach ($tests as [$name, $body]) {

@@ -219,15 +219,27 @@ final class Settings
     public static function sanitize_connection_secret(mixed $value): string
     {
         $current = (string) get_option(self::CONNECTION_SECRET_OPTION, '');
-        $secret = self::validated_secret((string) $value);
-        if (trim((string) $value) === '') {
+        $submitted = trim((string) $value);
+        if ($submitted === '') {
             return $current;
         }
+        if (str_starts_with($submitted, 'v1:')) {
+            if (self::decrypt_secret($submitted) !== '') {
+                return $submitted;
+            }
+            add_settings_error(
+                self::CONNECTION_SECRET_OPTION,
+                'invalid_encrypted_connection_secret',
+                'DiscussionBridge rejected an invalid encrypted connection-secret value.'
+            );
+            return $current;
+        }
+        $secret = self::validated_secret($submitted);
         if ($secret === '') {
             add_settings_error(
                 self::CONNECTION_SECRET_OPTION,
                 'invalid_connection_secret',
-                'DiscussionBridge connection secret must contain 32 to 256 bytes without control characters.'
+                'Paste only the 43-character DiscussionBridge connection secret.'
             );
             return $current;
         }
@@ -298,7 +310,7 @@ final class Settings
     private static function validated_secret(string $value): string
     {
         $value = trim($value);
-        if (strlen($value) < 32 || strlen($value) > 256 || preg_match('/[\x00-\x1f\x7f]/', $value)) {
+        if (preg_match('/\A[A-Za-z0-9_-]{43}\z/D', $value) !== 1) {
             return '';
         }
         return $value;
@@ -331,7 +343,7 @@ final class Settings
         return 'v1:' . base64_encode($iv . $tag . $ciphertext);
     }
 
-    private static function decrypt_secret(string $encrypted): string
+    private static function decrypt_secret(string $encrypted, int $depth = 0): string
     {
         if (!str_starts_with($encrypted, 'v1:') || !function_exists('openssl_decrypt')) {
             return '';
@@ -348,7 +360,13 @@ final class Settings
             substr($payload, 0, 12),
             substr($payload, 12, 16)
         );
-        return is_string($secret) ? self::validated_secret($secret) : '';
+        if (!is_string($secret)) {
+            return '';
+        }
+        if ($depth < 1 && str_starts_with($secret, 'v1:')) {
+            return self::decrypt_secret($secret, $depth + 1);
+        }
+        return self::validated_secret($secret);
     }
 
     private static function encryption_key(): string
