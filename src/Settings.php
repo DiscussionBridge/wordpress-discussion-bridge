@@ -8,6 +8,7 @@ final class Settings
 {
     public const SERVER_URL_OPTION = 'discussionbridge_server_url';
     public const CONNECTION_ID_OPTION = 'discussionbridge_connection_id';
+    public const CONNECTION_SECRET_OPTION = 'discussionbridge_connection_secret_encrypted';
     public const SITE_ID_OPTION = 'discussionbridge_site_id';
     public const LANE_OPTION = 'discussionbridge_lane';
     public const POST_TYPES_OPTION = 'discussionbridge_post_types';
@@ -25,6 +26,12 @@ final class Settings
             'type' => 'string',
             'sanitize_callback' => [self::class, 'sanitize_connection_id'],
             'default' => '',
+        ]);
+        register_setting('discussionbridge', self::CONNECTION_SECRET_OPTION, [
+            'type' => 'string',
+            'sanitize_callback' => [self::class, 'sanitize_connection_secret'],
+            'default' => '',
+            'show_in_rest' => false,
         ]);
         register_setting('discussionbridge', self::LANE_OPTION, [
             'type' => 'string',
@@ -69,10 +76,26 @@ final class Settings
         if (defined('DISCUSSIONBRIDGE_CONNECTION_SECRET')) {
             return self::validated_secret((string) constant('DISCUSSIONBRIDGE_CONNECTION_SECRET'));
         }
-        if (!defined('DISCUSSIONBRIDGE_CONNECTION_SECRET_FILE')) {
-            return '';
+        if (defined('DISCUSSIONBRIDGE_CONNECTION_SECRET_FILE')) {
+            return self::secret_from_file((string) constant('DISCUSSIONBRIDGE_CONNECTION_SECRET_FILE'));
         }
-        $path = (string) constant('DISCUSSIONBRIDGE_CONNECTION_SECRET_FILE');
+
+        return self::decrypt_secret((string) get_option(self::CONNECTION_SECRET_OPTION, ''));
+    }
+
+    public static function connection_secret_source(): string
+    {
+        if (defined('DISCUSSIONBRIDGE_CONNECTION_SECRET')) {
+            return self::connection_secret() !== '' ? 'server_constant' : 'missing';
+        }
+        if (defined('DISCUSSIONBRIDGE_CONNECTION_SECRET_FILE')) {
+            return self::connection_secret() !== '' ? 'server_file' : 'missing';
+        }
+        return self::connection_secret() !== '' ? 'wordpress_encrypted' : 'missing';
+    }
+
+    private static function secret_from_file(string $path): string
+    {
         $real = realpath($path);
         $webroot = realpath(ABSPATH);
         if ($real === false || !is_file($real) || !is_readable($real) || filesize($real) > 512) {
@@ -193,6 +216,33 @@ final class Settings
         return '';
     }
 
+    public static function sanitize_connection_secret(mixed $value): string
+    {
+        $current = (string) get_option(self::CONNECTION_SECRET_OPTION, '');
+        $secret = self::validated_secret((string) $value);
+        if (trim((string) $value) === '') {
+            return $current;
+        }
+        if ($secret === '') {
+            add_settings_error(
+                self::CONNECTION_SECRET_OPTION,
+                'invalid_connection_secret',
+                'DiscussionBridge connection secret must contain 32 to 256 bytes without control characters.'
+            );
+            return $current;
+        }
+        $encrypted = self::encrypt_secret($secret);
+        if ($encrypted === '') {
+            add_settings_error(
+                self::CONNECTION_SECRET_OPTION,
+                'connection_secret_encryption_failed',
+                'DiscussionBridge could not encrypt the connection secret on this WordPress installation.'
+            );
+            return $current;
+        }
+        return $encrypted;
+    }
+
     public static function sanitize_lane(mixed $value): string
     {
         $value = trim((string) $value);
@@ -252,5 +302,57 @@ final class Settings
             return '';
         }
         return $value;
+    }
+
+    private static function encrypt_secret(string $secret): string
+    {
+        if (!function_exists('openssl_encrypt')) {
+            return '';
+        }
+        try {
+            $iv = random_bytes(12);
+        } catch (\Throwable) {
+            return '';
+        }
+        $tag = '';
+        $ciphertext = openssl_encrypt(
+            $secret,
+            'aes-256-gcm',
+            self::encryption_key(),
+            OPENSSL_RAW_DATA,
+            $iv,
+            $tag,
+            '',
+            16
+        );
+        if (!is_string($ciphertext) || strlen($tag) !== 16) {
+            return '';
+        }
+        return 'v1:' . base64_encode($iv . $tag . $ciphertext);
+    }
+
+    private static function decrypt_secret(string $encrypted): string
+    {
+        if (!str_starts_with($encrypted, 'v1:') || !function_exists('openssl_decrypt')) {
+            return '';
+        }
+        $payload = base64_decode(substr($encrypted, 3), true);
+        if (!is_string($payload) || strlen($payload) < 29) {
+            return '';
+        }
+        $secret = openssl_decrypt(
+            substr($payload, 28),
+            'aes-256-gcm',
+            self::encryption_key(),
+            OPENSSL_RAW_DATA,
+            substr($payload, 0, 12),
+            substr($payload, 12, 16)
+        );
+        return is_string($secret) ? self::validated_secret($secret) : '';
+    }
+
+    private static function encryption_key(): string
+    {
+        return hash('sha256', wp_salt('auth') . "\0" . wp_salt('secure_auth'), true);
     }
 }

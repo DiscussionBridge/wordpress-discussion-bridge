@@ -59,9 +59,17 @@ define('DISCUSSIONBRIDGE_SERVICE_AUTHOR', 'discussionbridge');
 ```
 
 The secret file must be outside the webroot and readable only by the PHP-FPM
-application identity. The secret is never stored in WordPress options and must
-never be exposed to browsers, themes, public REST responses, URLs, content, or
-logs.
+application identity. Its path and value are never stored in WordPress options.
+Connection secrets must never be exposed to browsers, themes, public REST
+responses, URLs, content, or logs.
+
+For installations without server-file access, an administrator may paste the
+one-time connection secret under **Settings → DiscussionBridge**. The plugin
+encrypts it with that WordPress installation's authentication salts, stores the
+ciphertext in a non-autoloaded option, and never redisplays the secret.
+Server-defined constants and secret files always take precedence. Rotating the
+WordPress authentication salts invalidates an admin-stored credential; paste a
+fresh connection secret afterward.
 
 The service author must be an existing WordPress user allowed to publish posts.
 It owns locally materialized posts; the transported Discourse author, topic and

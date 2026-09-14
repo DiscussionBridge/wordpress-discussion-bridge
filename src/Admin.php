@@ -128,7 +128,18 @@ final class Admin
                     </tr>
                     <tr>
                         <th scope="row"><?php echo esc_html__('Connection secret', 'discussionbridge'); ?></th>
-                        <td><strong><?php echo Settings::connection_secret() !== '' ? esc_html__('Available from protected server configuration', 'discussionbridge') : esc_html__('Missing', 'discussionbridge'); ?></strong><p class="description"><?php echo esc_html__('The secret is never stored in WordPress options. Configure DISCUSSIONBRIDGE_CONNECTION_SECRET_FILE outside the webroot.', 'discussionbridge'); ?></p></td>
+                        <td>
+                            <?php $secret_source = Settings::connection_secret_source(); ?>
+                            <strong><?php
+                                echo esc_html(match ($secret_source) {
+                                    'server_constant', 'server_file' => __('Available from protected server configuration', 'discussionbridge'),
+                                    'wordpress_encrypted' => __('Stored encrypted by WordPress', 'discussionbridge'),
+                                    default => __('Missing', 'discussionbridge'),
+                                });
+                            ?></strong>
+                            <p><input class="regular-text" type="password" id="discussionbridge_connection_secret" name="<?php echo esc_attr(Settings::CONNECTION_SECRET_OPTION); ?>" value="" autocomplete="new-password" placeholder="<?php echo esc_attr($secret_source === 'missing' ? __('Paste connection secret', 'discussionbridge') : __('Enter only to replace the current secret', 'discussionbridge')); ?>"></p>
+                            <p class="description"><?php echo esc_html__('The secret is never redisplayed. WordPress stores an encrypted, non-autoloaded value using this installation’s authentication salts. A protected server constant or secret file takes precedence when configured.', 'discussionbridge'); ?></p>
+                        </td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="discussionbridge_lane"><?php echo esc_html__('Lane', 'discussionbridge'); ?></label></th>

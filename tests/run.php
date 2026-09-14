@@ -216,13 +216,29 @@ test('Simple mode batches missing replies and exposes bounded Show more', functi
     expect(count($GLOBALS['dbt']['requests']) === 4, 'expected record, topic, batched posts and branding requests');
 });
 
-test('activation and boot are idempotent and do not expose a secret option', function (): void {
+test('activation and boot create only non-autoloaded encrypted credential storage', function (): void {
     dbt_reset(); unset($GLOBALS['dbt']['options']['discussionbridge_site_id']);
     Plugin::activate(); $first = $GLOBALS['dbt']['options']['discussionbridge_site_id']; Plugin::activate();
     expect($GLOBALS['dbt']['options']['discussionbridge_site_id'] === $first);
+    expect(array_key_exists(Settings::CONNECTION_SECRET_OPTION, $GLOBALS['dbt']['options']));
     Plugin::boot();
     expect(count($GLOBALS['dbt']['actions']) >= 8 && count($GLOBALS['dbt']['filters']) >= 3);
-    foreach (array_keys($GLOBALS['dbt']['options']) as $key) expect(!str_contains($key, 'secret'));
+});
+
+test('admin credential storage encrypts, masks and preserves the connection secret', function (): void {
+    dbt_reset();
+    $secret = str_repeat('w', 40);
+    $encrypted = Settings::sanitize_connection_secret($secret);
+    expect($encrypted !== '' && $encrypted !== $secret, 'secret was stored as plaintext');
+    expect(str_starts_with($encrypted, 'v1:'), 'encrypted credential envelope is unversioned');
+    $GLOBALS['dbt']['options'][Settings::CONNECTION_SECRET_OPTION] = $encrypted;
+    $decrypt = new ReflectionMethod(Settings::class, 'decrypt_secret');
+    expect($decrypt->invoke(null, $encrypted) === $secret, 'encrypted credential did not round trip');
+    $tampered = substr($encrypted, 0, -1) . ($encrypted[-1] === 'A' ? 'B' : 'A');
+    expect($decrypt->invoke(null, $tampered) === '', 'tampered credential did not fail closed');
+    expect(Settings::sanitize_connection_secret('') === $encrypted, 'blank settings save erased the credential');
+    expect(Settings::connection_secret_source() === 'server_constant', 'protected server source lost precedence');
+    expect(!str_contains(file_get_contents(__DIR__ . '/../src/Admin.php'), 'value="<?php echo Settings::connection_secret'), 'admin field redisplays secret');
 });
 
 test('connection secret and lane match the receiver admission grammar', function (): void {

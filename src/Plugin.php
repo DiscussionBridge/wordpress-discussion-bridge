@@ -32,5 +32,6 @@ final class Plugin
         add_option(Settings::POST_TYPES_OPTION, ['post'], '', false);
         add_option(Settings::LANE_OPTION, '', '', false);
         add_option(Settings::COMMENTS_MODE_OPTION, 'interactive', '', false);
+        add_option(Settings::CONNECTION_SECRET_OPTION, '', '', false);
     }
 }

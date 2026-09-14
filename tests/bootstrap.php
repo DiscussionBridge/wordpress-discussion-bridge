@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.20';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.23';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error
@@ -70,6 +70,7 @@ function update_option(string $key, mixed $value, bool $autoload = true): bool {
 function add_option(string $key, mixed $value, string $deprecated = '', bool $autoload = true): bool { if (array_key_exists($key, $GLOBALS['dbt']['options'])) return false; $GLOBALS['dbt']['options'][$key] = $value; return true; }
 function register_setting(...$args): void {}
 function add_settings_error(string $setting, string $code, string $message): void { $GLOBALS['dbt']['settings_errors'][] = [$setting, $code, $message]; }
+function wp_salt(string $scheme = 'auth'): string { return 'discussionbridge-test-' . $scheme . '-salt'; }
 function sanitize_user(string $value, bool $strict = false): string { unset($strict); return strtolower(preg_replace('/[^a-zA-Z0-9_.@-]/', '', $value) ?? ''); }
 function sanitize_key(string $value): string { return strtolower(preg_replace('/[^a-z0-9_\-]/', '', $value) ?? ''); }
 function sanitize_title(string $value): string { return trim(strtolower(preg_replace('/[^a-z0-9]+/i', '-', $value) ?? ''), '-'); }
