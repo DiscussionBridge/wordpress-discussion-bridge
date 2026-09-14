@@ -71,6 +71,12 @@ Server-defined constants and secret files always take precedence. Rotating the
 WordPress authentication salts invalidates an admin-stored credential; paste a
 fresh connection secret afterward.
 
+WordPress schedules To Discourse delivery in the background. A post may remain
+**Queued** or **Delivering** briefly while WordPress Cron and the network finish
+the request. Refresh the DiscussionBridge settings page after a short wait. Do
+not select **Retry** while either status is shown; retry only after the delivery
+reports **Attention** or **Failed**.
+
 The service author must be an existing WordPress user allowed to publish posts.
 It owns locally materialized posts; the transported Discourse author, topic and
 revision remain separately visible as source provenance. This does not imply
