@@ -110,15 +110,17 @@ final class Materializer
         }
 
         $path = trim((string) wp_parse_url($canonical_url, PHP_URL_PATH), '/');
-        if ($path === '' || str_contains($path, '/')) {
-            return new WP_Error('discussionbridge_materialization_path', 'The first WordPress publisher profile requires one post slug.');
+        $segments = $path === '' ? [] : explode('/', $path);
+        $slug = sanitize_title(rawurldecode((string) end($segments)));
+        if ($slug === '') {
+            return new WP_Error('discussionbridge_materialization_path', 'The authorized WordPress URL must end with a valid post slug.');
         }
         $creating = $post_id === 0;
         $postarr = [
             'ID' => $post_id,
             'post_type' => Settings::post_types()[0],
             'post_status' => $creating ? 'draft' : 'publish',
-            'post_name' => sanitize_title($path),
+            'post_name' => $slug,
             'post_title' => $title,
             'post_content' => $materialized_content,
             'post_author' => $service_author_id,

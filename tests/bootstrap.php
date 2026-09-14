@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.25';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.26';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error
@@ -61,6 +61,7 @@ function dbt_reset(): void
         'settings_errors' => [], 'inserted' => [], 'deleted' => [], 'next_post_id' => 100,
         'queried_id' => 0, 'is_admin' => false, 'is_singular' => true, 'in_loop' => true,
         'main_query' => true, 'uuid_counter' => 1, 'wp_update_callback' => null,
+        'permalink_prefix' => '',
     ];
 }
 
@@ -93,7 +94,7 @@ function wp_is_post_revision(int $id): bool { return false; }
 function wp_is_post_autosave(int $id): bool { return false; }
 function wp_next_scheduled(string $hook, array $args = []): int|false { foreach ($GLOBALS['dbt']['scheduled'] as $item) if ($item[1] === $hook && $item[2] === $args) return $item[0]; return false; }
 function wp_schedule_single_event(int $timestamp, string $hook, array $args = []): bool { $GLOBALS['dbt']['scheduled'][] = [$timestamp, $hook, $args]; return true; }
-function get_permalink(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; $slug = $GLOBALS['dbt']['posts'][$id]->post_name ?: 'post-' . $id; return 'https://wordpress.example/' . $slug . '/'; }
+function get_permalink(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; $slug = $GLOBALS['dbt']['posts'][$id]->post_name ?: 'post-' . $id; return 'https://wordpress.example/' . $GLOBALS['dbt']['permalink_prefix'] . $slug . '/'; }
 function get_the_title(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; return $GLOBALS['dbt']['posts'][$id]->post_title ?? ''; }
 function parse_blocks(string $content): array { return [['blockName' => null, 'innerHTML' => $content, 'innerBlocks' => []]]; }
 function serialize_blocks(array $blocks): string { return implode('', array_map(fn($b) => (string) ($b['innerHTML'] ?? ''), $blocks)); }

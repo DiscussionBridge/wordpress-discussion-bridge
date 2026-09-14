@@ -133,6 +133,17 @@ test('materialization uses configured local owner and visible source provenance'
     expect(Materializer::materialize(valid_record()) === 'unchanged');
 });
 
+test('materialization supports a WordPress-generated dated permalink', function (): void {
+    dbt_reset();
+    $GLOBALS['dbt']['permalink_prefix'] = '2026/09/14/';
+    $record = valid_record();
+    $record['bindings'][0]['canonical_url'] = 'https://wordpress.example/2026/09/14/from-the-bridge/';
+    expect(Materializer::materialize($record) === 'created');
+    expect($GLOBALS['dbt']['posts'][100]->post_name === 'from-the-bridge');
+    expect(get_permalink(100) === $record['bindings'][0]['canonical_url']);
+    expect(Materializer::materialize($record) === 'unchanged');
+});
+
 test('same-revision materialization repairs a legacy authorless post without changing identity', function (): void {
     dbt_reset(); $record = valid_record();
     expect(Materializer::materialize($record) === 'created');
