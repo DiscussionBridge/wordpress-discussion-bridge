@@ -191,17 +191,6 @@ final class Admin
             <h1><?php echo esc_html__('DiscussionBridge', 'discussionbridge'); ?></h1>
             <p><?php echo esc_html__('One WordPress installation, one independently scoped Content Connection.', 'discussionbridge'); ?></p>
             <?php settings_errors(); ?>
-            <?php if ($sync_result !== null) : ?>
-                <div class="notice <?php echo $sync_result['failed'] > 0 ? 'notice-error' : 'notice-success'; ?> is-dismissible"><p><?php
-                    echo esc_html(sprintf(
-                        __('Synchronization complete: %1$d posts created, %2$d updated, %3$d already current, %4$d failed.', 'discussionbridge'),
-                        $sync_result['created'],
-                        $sync_result['updated'],
-                        $sync_result['unchanged'],
-                        $sync_result['failed']
-                    ));
-                ?></p></div>
-            <?php endif; ?>
             <form method="post" action="options.php">
                 <?php settings_fields('discussionbridge'); ?>
                 <table class="form-table" role="presentation">
@@ -264,6 +253,17 @@ final class Admin
                 <?php wp_nonce_field('discussionbridge_sync_publications'); ?>
                 <?php submit_button(__('Synchronize publications', 'discussionbridge'), 'secondary', 'submit', false); ?>
             </form>
+            <?php if ($sync_result !== null) : ?>
+                <div class="notice <?php echo $sync_result['failed'] > 0 ? 'notice-error' : 'notice-success'; ?> inline"><p><?php
+                    echo esc_html(sprintf(
+                        __('Synchronization complete: %1$d posts created, %2$d updated, %3$d already current, %4$d failed.', 'discussionbridge'),
+                        $sync_result['created'],
+                        $sync_result['updated'],
+                        $sync_result['unchanged'],
+                        $sync_result['failed']
+                    ));
+                ?></p></div>
+            <?php endif; ?>
             <p><code>[discussionbridge_record resource_id="…"]</code> <?php echo esc_html__('renders an authorized From Discourse record.', 'discussionbridge'); ?></p>
             <table class="widefat striped">
                 <thead><tr><th><?php echo esc_html__('Post', 'discussionbridge'); ?></th><th><?php echo esc_html__('Status', 'discussionbridge'); ?></th><th><?php echo esc_html__('Resource', 'discussionbridge'); ?></th><th><?php echo esc_html__('Topic', 'discussionbridge'); ?></th><th><?php echo esc_html__('Last result', 'discussionbridge'); ?></th><th></th></tr></thead>
