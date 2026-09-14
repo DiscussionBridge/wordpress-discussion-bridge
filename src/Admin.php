@@ -6,6 +6,60 @@ namespace DiscussionBridge\WordPress;
 
 final class Admin
 {
+    public static function enqueue_assets(string $hook_suffix): void
+    {
+        if ($hook_suffix !== 'settings_page_discussionbridge' || !current_user_can('manage_options')) {
+            return;
+        }
+        wp_enqueue_script(
+            'discussionbridge-admin',
+            plugins_url('assets/discussionbridge-admin.js', DISCUSSIONBRIDGE_WORDPRESS_FILE),
+            ['jquery', 'jquery-ui-autocomplete'],
+            DISCUSSIONBRIDGE_WORDPRESS_VERSION,
+            true
+        );
+        wp_enqueue_style(
+            'discussionbridge-admin',
+            plugins_url('assets/discussionbridge-admin.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
+            [],
+            DISCUSSIONBRIDGE_WORDPRESS_VERSION
+        );
+        wp_localize_script('discussionbridge-admin', 'DiscussionBridgeAdmin', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('discussionbridge_search_authors'),
+        ]);
+    }
+
+    public static function search_authors(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('You do not have permission to search users.', 'discussionbridge')], 403);
+        }
+        check_ajax_referer('discussionbridge_search_authors', 'nonce');
+        $term = isset($_GET['term']) ? sanitize_text_field(wp_unslash($_GET['term'])) : '';
+        $args = [
+            'capability' => 'publish_posts',
+            'number' => 20,
+            'orderby' => 'display_name',
+            'order' => 'ASC',
+        ];
+        if ($term !== '') {
+            $args['search'] = '*' . $term . '*';
+            $args['search_columns'] = ['user_login', 'display_name'];
+        }
+        $results = [];
+        foreach (get_users($args) as $user) {
+            if (!$user instanceof \WP_User || !user_can($user, 'publish_posts')) {
+                continue;
+            }
+            $results[] = [
+                'label' => sprintf('%s (@%s)', $user->display_name, $user->user_login),
+                'value' => $user->user_login,
+            ];
+        }
+        wp_send_json($results);
+    }
+
     public static function register_menu(): void
     {
         add_options_page(
@@ -85,6 +139,12 @@ final class Admin
         } elseif (in_array($comments_mode, ['none', 'simple', 'full', 'interactive', 'fullInteractive'], true)) {
             update_post_meta($post_id, Presentation::COMMENTS_MODE_META, Settings::sanitize_comments_mode($comments_mode));
         }
+        if ($post->post_status === 'publish'
+            && get_post_meta($post_id, Publisher::ENABLED_META, true) === '1'
+            && get_post_meta($post_id, '_discussionbridge_status', true) === ''
+            && get_post_meta($post_id, '_discussionbridge_resource_id', true) === '') {
+            Publisher::queue($post_id, false);
+        }
     }
 
     public static function render(): void
@@ -110,8 +170,8 @@ final class Admin
                 <?php settings_fields('discussionbridge'); ?>
                 <table class="form-table" role="presentation">
                     <tr>
-                        <th scope="row"><label for="discussionbridge_server_url"><?php echo esc_html__('Discourse origin', 'discussionbridge'); ?></label></th>
-                        <td><input class="regular-text" type="url" id="discussionbridge_server_url" name="<?php echo esc_attr(Settings::SERVER_URL_OPTION); ?>" value="<?php echo esc_attr(Settings::server_url()); ?>" placeholder="https://forum.example" required></td>
+                        <th scope="row"><label for="discussionbridge_server_url"><?php echo esc_html__('Receiving Discourse URL', 'discussionbridge'); ?></label></th>
+                        <td><input class="regular-text" type="url" id="discussionbridge_server_url" name="<?php echo esc_attr(Settings::SERVER_URL_OPTION); ?>" value="<?php echo esc_attr(Settings::server_url()); ?>" placeholder="https://forum.example" required><p class="description"><?php echo esc_html__('The Discourse forum running The Bridge—not this WordPress site’s URL.', 'discussionbridge'); ?></p></td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="discussionbridge_comments_mode_default"><?php echo esc_html__('Default discussion mode', 'discussionbridge'); ?></label></th>
@@ -147,7 +207,7 @@ final class Admin
                     </tr>
                     <tr>
                         <th scope="row"><label for="discussionbridge_service_author"><?php echo esc_html__('From Discourse service author', 'discussionbridge'); ?></label></th>
-                        <td><input class="regular-text" type="text" id="discussionbridge_service_author" name="<?php echo esc_attr(Settings::SERVICE_AUTHOR_OPTION); ?>" value="<?php echo esc_attr(Settings::service_author_username()); ?>" autocomplete="off" required><p class="description"><?php echo esc_html__('Existing WordPress user that locally owns materialized posts. The original Discourse author remains separately visible as source provenance.', 'discussionbridge'); ?></p></td>
+                        <td><input class="regular-text" type="text" id="discussionbridge_service_author" name="<?php echo esc_attr(Settings::SERVICE_AUTHOR_OPTION); ?>" value="<?php echo esc_attr(Settings::service_author_username()); ?>" autocomplete="off" role="combobox" aria-autocomplete="list" aria-describedby="discussionbridge_service_author_help" required><p id="discussionbridge_service_author_help" class="description"><?php echo esc_html__('Begin typing to select an existing WordPress user allowed to publish posts. That user locally owns materialized posts; the original Discourse author remains separately visible as source provenance.', 'discussionbridge'); ?></p></td>
                     </tr>
                     <tr>
                         <th scope="row"><?php echo esc_html__('Published post types', 'discussionbridge'); ?></th>

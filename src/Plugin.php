@@ -10,6 +10,8 @@ final class Plugin
     {
         add_action('admin_init', [Settings::class, 'register']);
         add_action('admin_menu', [Admin::class, 'register_menu']);
+        add_action('admin_enqueue_scripts', [Admin::class, 'enqueue_assets']);
+        add_action('wp_ajax_discussionbridge_search_authors', [Admin::class, 'search_authors']);
         add_action('admin_post_discussionbridge_retry', [Admin::class, 'retry']);
         add_action('admin_post_discussionbridge_sync_publications', [Admin::class, 'sync_publications']);
         add_action('add_meta_boxes', [Admin::class, 'register_meta_box']);

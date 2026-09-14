@@ -5,6 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 
 use DiscussionBridge\WordPress\Materializer;
+use DiscussionBridge\WordPress\Admin;
 use DiscussionBridge\WordPress\Plugin;
 use DiscussionBridge\WordPress\Presentation;
 use DiscussionBridge\WordPress\Publisher;
@@ -62,6 +63,24 @@ test('first publish queues once; draft, edit and disabled do not', function (): 
     $post->post_status = 'draft'; Publisher::post_saved(1, $post, true, null);
     unset($GLOBALS['dbt']['meta'][1][Publisher::ENABLED_META]); $post->post_status = 'publish'; Publisher::post_saved(1, $post, true, null);
     expect(count($GLOBALS['dbt']['scheduled']) === 1);
+});
+
+test('published Gutenberg post queues after its opt-in meta becomes available', function (): void {
+    dbt_reset();
+    $post = new WP_Post(7, 'publish', 'post', 'WordPress Sandbox', '<p>Body</p>', 7, 'wordpress-sandbox');
+    $GLOBALS['dbt']['posts'][7] = $post;
+    $_POST = [
+        'discussionbridge_post_nonce' => 'valid',
+        'discussionbridge_enabled' => '1',
+        'discussionbridge_comments_mode' => 'interactive',
+    ];
+    Admin::save_meta_box(7, $post);
+    expect(get_post_meta(7, Publisher::ENABLED_META, true) === '1', 'opt-in meta was not saved');
+    expect(get_post_meta(7, '_discussionbridge_status', true) === 'queued', 'post was not queued after meta save');
+    expect(count($GLOBALS['dbt']['scheduled']) === 1, 'expected one recovery delivery event');
+    Admin::save_meta_box(7, $post);
+    expect(count($GLOBALS['dbt']['scheduled']) === 1, 'duplicate delivery event was scheduled');
+    $_POST = [];
 });
 
 test('configured WP Discourse blocks delivery before network', function (): void {

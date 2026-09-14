@@ -1,0 +1,26 @@
+.settings_page_discussionbridge .ui-autocomplete {
+  position: absolute;
+  z-index: 100000;
+  max-height: 16rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.25rem 0;
+  border: 1px solid #8c8f94;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 16%);
+}
+
+.settings_page_discussionbridge .ui-autocomplete .ui-menu-item {
+  margin: 0;
+}
+
+.settings_page_discussionbridge .ui-autocomplete .ui-menu-item-wrapper {
+  padding: 0.375rem 0.625rem;
+  cursor: pointer;
+}
+
+.settings_page_discussionbridge .ui-autocomplete .ui-state-active {
+  background: #2271b1;
+  color: #fff;
+}

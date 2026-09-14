@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.23';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.24';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error
@@ -71,6 +71,10 @@ function add_option(string $key, mixed $value, string $deprecated = '', bool $au
 function register_setting(...$args): void {}
 function add_settings_error(string $setting, string $code, string $message): void { $GLOBALS['dbt']['settings_errors'][] = [$setting, $code, $message]; }
 function wp_salt(string $scheme = 'auth'): string { return 'discussionbridge-test-' . $scheme . '-salt'; }
+function wp_unslash(mixed $value): mixed { return $value; }
+function sanitize_text_field(string $value): string { return trim($value); }
+function wp_verify_nonce(string $nonce, string $action): bool { unset($nonce, $action); return true; }
+function current_user_can(string $capability, mixed ...$args): bool { unset($capability, $args); return true; }
 function sanitize_user(string $value, bool $strict = false): string { unset($strict); return strtolower(preg_replace('/[^a-zA-Z0-9_.@-]/', '', $value) ?? ''); }
 function sanitize_key(string $value): string { return strtolower(preg_replace('/[^a-z0-9_\-]/', '', $value) ?? ''); }
 function sanitize_title(string $value): string { return trim(strtolower(preg_replace('/[^a-z0-9]+/i', '-', $value) ?? ''), '-'); }
@@ -147,6 +151,7 @@ require_once __DIR__ . '/../src/TableOfContents.php';
 require_once __DIR__ . '/../src/Publisher.php';
 require_once __DIR__ . '/../src/Materializer.php';
 require_once __DIR__ . '/../src/Presentation.php';
+require_once __DIR__ . '/../src/Admin.php';
 require_once __DIR__ . '/../src/Plugin.php';
 
 dbt_reset();
