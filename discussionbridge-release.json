@@ -1,11 +1,11 @@
 {
   "family": {
     "name": "DiscussionBridge",
-    "version": "0.2.0-alpha.26"
+    "version": "0.2.0-alpha.27"
   },
   "component": {
     "name": "DiscussionBridge for WordPress",
-    "version": "0.2.0-alpha.26"
+    "version": "0.2.0-alpha.27"
   },
   "bridgeCompatibility": "0.2",
   "repository": "https://github.com/DiscussionBridge/wordpress-discussion-bridge"

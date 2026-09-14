@@ -38,6 +38,13 @@ test('package, plugin, block and asset versions agree', function (): void {
     expect(($asset['version'] ?? null) === DISCUSSIONBRIDGE_WORDPRESS_VERSION);
 });
 
+test('operator results translate protocol outcomes into direct language', function (): void {
+    expect(Admin::operator_result_label('materialized', '') === 'Post created');
+    expect(Admin::operator_result_label('created', 'bridge_record_created') === 'Discourse topic created');
+    expect(Admin::operator_result_label('resolved', 'existing_bridge_record') === 'Existing Discourse topic found');
+    expect(Admin::operator_result_label('failed', 'unauthorized') === 'Delivery failed');
+});
+
 test('discussion mode emits Interactive and accepts the historical token', function (): void {
     dbt_reset();
     expect(Settings::sanitize_comments_mode('interactive') === 'interactive');

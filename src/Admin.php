@@ -71,6 +71,22 @@ final class Admin
         );
     }
 
+    public static function operator_result_label(string $outcome, string $reason): string
+    {
+        return match ($outcome) {
+            'materialized' => __('Post created', 'discussionbridge'),
+            'updated' => __('Post updated', 'discussionbridge'),
+            'created' => __('Discourse topic created', 'discussionbridge'),
+            'resolved' => $reason === 'existing_bridge_record'
+                ? __('Existing Discourse topic found', 'discussionbridge')
+                : __('Discourse topic found', 'discussionbridge'),
+            'failed' => __('Delivery failed', 'discussionbridge'),
+            default => $outcome === ''
+                ? __('No result yet', 'discussionbridge')
+                : ucwords(str_replace('_', ' ', $outcome)),
+        };
+    }
+
     public static function sync_publications(): void
     {
         if (!current_user_can('manage_options')) {
@@ -161,11 +177,31 @@ final class Admin
             'orderby' => 'modified',
             'order' => 'DESC',
         ]);
+        $sync_result = null;
+        if (isset($_GET['created'], $_GET['updated'], $_GET['unchanged'], $_GET['failed'])) {
+            $sync_result = [
+                'created' => absint($_GET['created']),
+                'updated' => absint($_GET['updated']),
+                'unchanged' => absint($_GET['unchanged']),
+                'failed' => absint($_GET['failed']),
+            ];
+        }
         ?>
         <div class="wrap">
             <h1><?php echo esc_html__('DiscussionBridge', 'discussionbridge'); ?></h1>
             <p><?php echo esc_html__('One WordPress installation, one independently scoped Content Connection.', 'discussionbridge'); ?></p>
             <?php settings_errors(); ?>
+            <?php if ($sync_result !== null) : ?>
+                <div class="notice <?php echo $sync_result['failed'] > 0 ? 'notice-error' : 'notice-success'; ?> is-dismissible"><p><?php
+                    echo esc_html(sprintf(
+                        __('Synchronization complete: %1$d posts created, %2$d updated, %3$d already current, %4$d failed.', 'discussionbridge'),
+                        $sync_result['created'],
+                        $sync_result['updated'],
+                        $sync_result['unchanged'],
+                        $sync_result['failed']
+                    ));
+                ?></p></div>
+            <?php endif; ?>
             <form method="post" action="options.php">
                 <?php settings_fields('discussionbridge'); ?>
                 <table class="form-table" role="presentation">
@@ -241,7 +277,14 @@ final class Admin
                         <td><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_status', true)); ?></td>
                         <td><code><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_resource_id', true)); ?></code></td>
                         <td><?php $topic_url = (string) get_post_meta($post->ID, '_discussionbridge_topic_url', true); ?><?php if ($topic_url !== '') : ?><a href="<?php echo esc_url($topic_url); ?>"><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_topic_id', true)); ?></a><?php endif; ?></td>
-                        <td><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_last_outcome', true)); ?> / <?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_last_reason', true)); ?></td>
+                        <td><?php
+                            $last_outcome = (string) get_post_meta($post->ID, '_discussionbridge_last_outcome', true);
+                            $last_reason = (string) get_post_meta($post->ID, '_discussionbridge_last_reason', true);
+                            ?><strong><?php echo esc_html(self::operator_result_label($last_outcome, $last_reason)); ?></strong><?php
+                            if ($last_outcome !== '' || $last_reason !== '') :
+                            ?><details><summary><?php echo esc_html__('Technical details', 'discussionbridge'); ?></summary><code><?php echo esc_html($last_outcome); ?><?php if ($last_reason !== '') : ?> / <?php echo esc_html($last_reason); ?><?php endif; ?></code></details><?php
+                            endif;
+                        ?></td>
                         <td><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="discussionbridge_retry"><input type="hidden" name="post_id" value="<?php echo (int) $post->ID; ?>"><?php wp_nonce_field('discussionbridge_retry_' . $post->ID); ?><?php submit_button(__('Retry', 'discussionbridge'), 'secondary small', 'submit', false); ?></form></td>
                     </tr>
                 <?php endforeach; ?>
