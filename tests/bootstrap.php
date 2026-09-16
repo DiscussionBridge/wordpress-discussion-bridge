@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.30';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.31';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error
@@ -24,7 +24,9 @@ final class WP_Post
         public string $post_title = '',
         public string $post_content = '',
         public int $post_author = 0,
-        public string $post_name = ''
+        public string $post_name = '',
+        public string $post_date = '2026-09-14 20:58:09',
+        public string $post_date_gmt = '2026-09-14 20:58:09'
     ) {}
 }
 
@@ -62,6 +64,8 @@ function dbt_reset(): void
         'queried_id' => 0, 'is_admin' => false, 'is_singular' => true, 'in_loop' => true,
         'main_query' => true, 'uuid_counter' => 1, 'wp_update_callback' => null,
         'permalink_prefix' => '',
+        'dated_permalinks' => false,
+        'current_post_date' => '2026-09-16 19:17:48',
     ];
 }
 
@@ -94,7 +98,7 @@ function wp_is_post_revision(int $id): bool { return false; }
 function wp_is_post_autosave(int $id): bool { return false; }
 function wp_next_scheduled(string $hook, array $args = []): int|false { foreach ($GLOBALS['dbt']['scheduled'] as $item) if ($item[1] === $hook && $item[2] === $args) return $item[0]; return false; }
 function wp_schedule_single_event(int $timestamp, string $hook, array $args = []): bool { $GLOBALS['dbt']['scheduled'][] = [$timestamp, $hook, $args]; return true; }
-function get_permalink(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; $slug = $GLOBALS['dbt']['posts'][$id]->post_name ?: 'post-' . $id; return 'https://wordpress.example/' . $GLOBALS['dbt']['permalink_prefix'] . $slug . '/'; }
+function get_permalink(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; $stored = $GLOBALS['dbt']['posts'][$id]; $slug = $stored->post_name ?: 'post-' . $id; $prefix = $GLOBALS['dbt']['dated_permalinks'] ? str_replace('-', '/', substr($stored->post_date, 0, 10)) . '/' : $GLOBALS['dbt']['permalink_prefix']; return 'https://wordpress.example/' . $prefix . $slug . '/'; }
 function get_the_title(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; return $GLOBALS['dbt']['posts'][$id]->post_title ?? ''; }
 function parse_blocks(string $content): array { return [['blockName' => null, 'innerHTML' => $content, 'innerBlocks' => []]]; }
 function serialize_blocks(array $blocks): string { return implode('', array_map(fn($b) => (string) ($b['innerHTML'] ?? ''), $blocks)); }
@@ -110,7 +114,7 @@ function wp_remote_retrieve_body(array $response): string { return (string) ($re
 function dbt_response(int $status, mixed $body, string $content_type = 'application/json'): array { return ['response' => ['code' => $status], 'headers' => ['content-type' => $content_type], 'body' => is_string($body) ? $body : json_encode($body, JSON_UNESCAPED_SLASHES)]; }
 function get_posts(array $args): array { if (($args['fields'] ?? '') === 'ids' && isset($args['meta_key'])) { $ids = []; foreach ($GLOBALS['dbt']['meta'] as $id => $meta) if (($meta[$args['meta_key']] ?? null) === ($args['meta_value'] ?? null)) $ids[] = $id; return array_slice($ids, 0, (int) ($args['posts_per_page'] ?? 5)); } return array_values($GLOBALS['dbt']['posts']); }
 function url_to_postid(string $url): int { foreach ($GLOBALS['dbt']['posts'] as $post) if (get_permalink($post) === $url) return $post->ID; return 0; }
-function wp_insert_post(array $data, bool $wp_error = false): int|WP_Error { unset($wp_error); $id = (int) ($data['ID'] ?: $GLOBALS['dbt']['next_post_id']++); $post = $GLOBALS['dbt']['posts'][$id] ?? new WP_Post($id); foreach (['post_type','post_status','post_name','post_title','post_content','post_author'] as $key) if (array_key_exists($key, $data)) $post->{$key} = $data[$key]; $GLOBALS['dbt']['posts'][$id] = $post; $GLOBALS['dbt']['inserted'][] = $data; return $id; }
+function wp_insert_post(array $data, bool $wp_error = false): int|WP_Error { unset($wp_error); $id = (int) ($data['ID'] ?: $GLOBALS['dbt']['next_post_id']++); $post = $GLOBALS['dbt']['posts'][$id] ?? new WP_Post($id); foreach (['post_type','post_status','post_name','post_title','post_content','post_author'] as $key) if (array_key_exists($key, $data)) $post->{$key} = $data[$key]; $post->post_date = $data['post_date'] ?? $GLOBALS['dbt']['current_post_date']; $post->post_date_gmt = $data['post_date_gmt'] ?? $GLOBALS['dbt']['current_post_date']; $GLOBALS['dbt']['posts'][$id] = $post; $GLOBALS['dbt']['inserted'][] = $data; return $id; }
 function wp_update_post(array $data): int|WP_Error { $callback = $GLOBALS['dbt']['wp_update_callback']; return is_callable($callback) ? $callback($data) : wp_insert_post($data, true); }
 function wp_delete_post(int $id, bool $force = false): WP_Post|false { unset($force); $post = $GLOBALS['dbt']['posts'][$id] ?? false; unset($GLOBALS['dbt']['posts'][$id], $GLOBALS['dbt']['meta'][$id]); $GLOBALS['dbt']['deleted'][] = $id; return $post; }
 function clean_post_cache(int $id): void {}
