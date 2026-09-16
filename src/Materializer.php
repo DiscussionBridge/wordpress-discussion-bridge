@@ -12,9 +12,13 @@ final class Materializer
     private const META_PREFIX = '_discussionbridge_';
     private const MAX_PAGES = 10000;
 
-    /** @return array{created:int,updated:int,unchanged:int,failed:int} */
-    public static function sync(): array
+    /**
+     * @param array<int,string>|null $failure_codes Receives bounded, non-secret error codes for the operator.
+     * @return array{created:int,updated:int,unchanged:int,failed:int}
+     */
+    public static function sync(?array &$failure_codes = null): array
     {
+        $failure_codes = [];
         $totals = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'failed' => 0];
         $client = new Client();
         $expected_pages = null;
@@ -26,6 +30,7 @@ final class Materializer
             if (is_wp_error($payload) || !isset($payload['bridge_records'], $payload['pagination'])
                 || !is_array($payload['bridge_records']) || !is_array($payload['pagination'])) {
                 $totals['failed']++;
+                self::record_failure($failure_codes, is_wp_error($payload) ? $payload->get_error_code() : 'invalid_record_feed');
                 break;
             }
             $reported_page = $payload['pagination']['page'] ?? null;
@@ -40,6 +45,7 @@ final class Materializer
                 || ($expected_total !== null && $total !== $expected_total)
                 || ($snapshot !== null && $reported_snapshot !== $snapshot)) {
                 $totals['failed']++;
+                self::record_failure($failure_codes, 'invalid_record_pagination');
                 break;
             }
             $expected_pages ??= $pages;
@@ -49,6 +55,7 @@ final class Materializer
                 $resource_id = is_array($record) ? strtolower((string) ($record['resource_id'] ?? '')) : '';
                 if (!wp_is_uuid($resource_id) || isset($seen_resources[$resource_id])) {
                     $totals['failed']++;
+                    self::record_failure($failure_codes, 'invalid_or_duplicate_resource_id');
                     break 2;
                 }
                 $seen_resources[$resource_id] = true;
@@ -58,6 +65,9 @@ final class Materializer
                 }
                 $result = self::materialize($record);
                 $totals[is_wp_error($result) ? 'failed' : $result]++;
+                if (is_wp_error($result)) {
+                    self::record_failure($failure_codes, $result->get_error_code());
+                }
             }
             if ($page >= $pages) {
                 break;
@@ -65,8 +75,18 @@ final class Materializer
         }
         if ($expected_total !== null && count($seen_resources) !== $expected_total) {
             $totals['failed']++;
+            self::record_failure($failure_codes, 'record_count_mismatch');
         }
         return $totals;
+    }
+
+    /** @param array<int,string> $failure_codes */
+    private static function record_failure(array &$failure_codes, string $code): void
+    {
+        $safe_code = substr(sanitize_key($code), 0, 80);
+        if ($safe_code !== '' && !in_array($safe_code, $failure_codes, true) && count($failure_codes) < 5) {
+            $failure_codes[] = $safe_code;
+        }
     }
 
     /** @return 'created'|'updated'|'unchanged'|WP_Error */
@@ -95,11 +115,15 @@ final class Materializer
         }
         $post_id = $existing ? (int) $existing[0] : 0;
         if ($post_id > 0) {
-            if ((string) get_post_meta($post_id, self::META_PREFIX . 'canonical_url', true) !== $canonical_url) {
-                return new WP_Error('discussionbridge_materialization_identity_drift', 'The Bridge Record canonical URL changed.');
+            $previous_url = (string) get_post_meta($post_id, self::META_PREFIX . 'canonical_url', true);
+            if ($previous_url !== $canonical_url
+                && (!self::verified_url_migration($record, $previous_url, $canonical_url)
+                    || untrailingslashit((string) get_permalink($post_id)) !== untrailingslashit($canonical_url))) {
+                return new WP_Error('discussionbridge_materialization_identity_drift', 'The Bridge Record canonical URL changed without a verified migration of this WordPress post.');
             }
             $post = get_post($post_id);
-            if ((string) get_post_meta($post_id, self::META_PREFIX . 'source_revision', true) === $revision
+            if ($previous_url === $canonical_url
+                && (string) get_post_meta($post_id, self::META_PREFIX . 'source_revision', true) === $revision
                 && $post instanceof \WP_Post
                 && (int) $post->post_author === $service_author_id
                 && (string) $post->post_content === $materialized_content) {
@@ -240,6 +264,25 @@ final class Materializer
             && strtolower((string) ($url['host'] ?? '')) === strtolower((string) ($home['host'] ?? ''))
             && (int) ($url['port'] ?? 443) === (int) ($home['port'] ?? 443)
             && empty($url['user']) && empty($url['pass']) && empty($url['query']) && empty($url['fragment']);
+    }
+
+    private static function verified_url_migration(array $record, string $old_url, string $new_url): bool
+    {
+        foreach ($record['bindings'] ?? [] as $binding) {
+            if (!is_array($binding) || ($binding['role'] ?? null) !== 'presentation' || ($binding['state'] ?? null) !== 'active') {
+                continue;
+            }
+            $proof = $binding['url_migration'] ?? null;
+            return is_array($proof)
+                && ($proof['old_url'] ?? null) === $old_url
+                && ($proof['new_url'] ?? null) === $new_url
+                && in_array($proof['redirect_status'] ?? null, [301, 308], true)
+                && is_string($proof['verified_at'] ?? null)
+                && strtotime($proof['verified_at']) !== false
+                && self::same_site_url($old_url)
+                && self::same_site_url($new_url);
+        }
+        return false;
     }
 
     private static function native_materialization_authorized(array $record): bool

@@ -74,8 +74,8 @@ final class Admin
     public static function operator_result_label(string $outcome, string $reason): string
     {
         return match ($outcome) {
-            'materialized' => __('Post created', 'discussionbridge'),
-            'updated' => __('Post updated', 'discussionbridge'),
+            'materialized' => __('WordPress post created', 'discussionbridge'),
+            'updated' => __('WordPress post updated', 'discussionbridge'),
             'created' => __('Discourse topic created', 'discussionbridge'),
             'resolved' => $reason === 'existing_bridge_record'
                 ? __('Existing Discourse topic found', 'discussionbridge')
@@ -93,7 +93,9 @@ final class Admin
             wp_die(esc_html__('You do not have permission to synchronize DiscussionBridge publications.', 'discussionbridge'));
         }
         check_admin_referer('discussionbridge_sync_publications');
-        $result = Materializer::sync();
+        $failure_codes = [];
+        $result = Materializer::sync($failure_codes);
+        set_transient('discussionbridge_sync_failures_' . get_current_user_id(), $failure_codes, 300);
         wp_safe_redirect(add_query_arg(array_map('absint', $result), admin_url('options-general.php?page=discussionbridge')));
         exit;
     }
@@ -186,6 +188,14 @@ final class Admin
                 'failed' => absint($_GET['failed']),
             ];
         }
+        $sync_failures = [];
+        if ($sync_result !== null) {
+            $stored_failures = get_transient('discussionbridge_sync_failures_' . get_current_user_id());
+            if (is_array($stored_failures)) {
+                $sync_failures = array_slice(array_filter($stored_failures, 'is_string'), 0, 5);
+            }
+            delete_transient('discussionbridge_sync_failures_' . get_current_user_id());
+        }
         ?>
         <div class="wrap">
             <h1><?php echo esc_html__('DiscussionBridge', 'discussionbridge'); ?></h1>
@@ -263,6 +273,11 @@ final class Admin
                         $sync_result['failed']
                     ));
                 ?></p></div>
+                <?php if ($sync_failures !== []) : ?>
+                    <div class="notice notice-error inline"><p><?php echo esc_html__('Failure reason codes:', 'discussionbridge'); ?>
+                        <?php foreach ($sync_failures as $failure_code) : ?><code><?php echo esc_html($failure_code); ?></code> <?php endforeach; ?>
+                    </p></div>
+                <?php endif; ?>
             <?php endif; ?>
             <p><code>[discussionbridge_record resource_id="…"]</code> <?php echo esc_html__('renders an authorized From Discourse record.', 'discussionbridge'); ?></p>
             <table class="widefat striped">

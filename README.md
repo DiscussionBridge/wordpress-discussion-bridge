@@ -82,6 +82,13 @@ It owns locally materialized posts; the transported Discourse author, topic and
 revision remain separately visible as source provenance. This does not imply
 user or login synchronization.
 
+For **From Discourse** publications, use **Synchronize publications** under
+**Settings → DiscussionBridge**. The completion notice reports created,
+updated, already-current, and failed counts. If a failure occurs, the same
+page displays up to five non-secret failure reason codes for that run. Record
+those codes before refreshing; do not repeatedly synchronize an unexplained
+failure. Existing healthy posts are not deleted by a failed run.
+
 WP Discourse is a separate plugin. For the Alpha demonstration its automatic
 publication and comments paths must remain disabled so one WordPress lifecycle
 cannot create competing topics.

@@ -39,7 +39,8 @@ test('package, plugin, block and asset versions agree', function (): void {
 });
 
 test('operator results translate protocol outcomes into direct language', function (): void {
-    expect(Admin::operator_result_label('materialized', '') === 'Post created');
+    expect(Admin::operator_result_label('materialized', '') === 'WordPress post created');
+    expect(Admin::operator_result_label('updated', '') === 'WordPress post updated');
     expect(Admin::operator_result_label('created', 'bridge_record_created') === 'Discourse topic created');
     expect(Admin::operator_result_label('resolved', 'existing_bridge_record') === 'Existing Discourse topic found');
     expect(Admin::operator_result_label('failed', 'unauthorized') === 'Delivery failed');
@@ -179,6 +180,26 @@ test('materialization fails closed on missing author, collision and identity dri
     expect_error(Materializer::materialize($record), 'discussionbridge_materialization_identity_drift');
 });
 
+test('verified URL migration adopts the same already-moved WordPress post', function (): void {
+    dbt_reset();
+    $record = valid_record();
+    expect(Materializer::materialize($record) === 'created');
+    $old_url = $record['bindings'][0]['canonical_url'];
+    $new_url = 'https://wordpress.example/moved-from-the-bridge/';
+    $record['bindings'][0]['canonical_url'] = $new_url;
+    $record['bindings'][0]['url_migration'] = [
+        'old_url' => $old_url, 'new_url' => $new_url,
+        'redirect_status' => 301, 'verified_at' => '2026-09-16T12:00:00.000000Z',
+    ];
+    expect_error(Materializer::materialize($record), 'discussionbridge_materialization_identity_drift');
+    $GLOBALS['dbt']['posts'][100]->post_name = 'moved-from-the-bridge';
+    expect(Materializer::materialize($record) === 'updated');
+    expect(count($GLOBALS['dbt']['posts']) === 1);
+    expect(get_post_meta(100, '_discussionbridge_resource_id', true) === $record['resource_id']);
+    expect(get_post_meta(100, '_discussionbridge_canonical_url', true) === $new_url);
+    expect(Materializer::materialize($record) === 'unchanged');
+});
+
 test('materialization never reports success when WordPress cannot publish the draft', function (): void {
     dbt_reset();
     $GLOBALS['dbt']['wp_update_callback'] = fn(array $data): WP_Error => new WP_Error('publish_failed', 'publish failed');
@@ -213,8 +234,23 @@ test('publication sync completes page 101 and rejects inconsistent pagination', 
             'pagination' => ['page' => $page, 'pages' => $pages, 'total' => 0, 'snapshot' => 'snap'],
         ]);
     }
-    $totals = Materializer::sync();
+    $failure_codes = [];
+    $totals = Materializer::sync($failure_codes);
     expect($totals['failed'] === 1, 'inconsistent pagination was accepted');
+    expect($failure_codes === ['invalid_record_pagination'], 'pagination failure reason was not retained');
+});
+
+test('publication sync returns bounded materialization failure codes', function (): void {
+    dbt_reset();
+    unset($GLOBALS['dbt']['options'][Settings::SERVICE_AUTHOR_OPTION]);
+    $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/bridge-records.json?page=1'] = dbt_response(200, [
+        'bridge_records' => [valid_record()],
+        'pagination' => ['page' => 1, 'pages' => 1, 'total' => 1, 'snapshot' => 'snap'],
+    ]);
+    $failure_codes = [];
+    $totals = Materializer::sync($failure_codes);
+    expect($totals['failed'] === 1, 'materialization failure was not counted');
+    expect($failure_codes === ['discussionbridge_materialization_service_author'], 'materialization failure reason was not retained');
 });
 
 test('block and shortcode render sanitized credential-free From Discourse content', function (): void {
