@@ -234,8 +234,23 @@ test('publication sync completes page 101 and rejects inconsistent pagination', 
             'pagination' => ['page' => $page, 'pages' => $pages, 'total' => 0, 'snapshot' => 'snap'],
         ]);
     }
-    $totals = Materializer::sync();
+    $failure_codes = [];
+    $totals = Materializer::sync($failure_codes);
     expect($totals['failed'] === 1, 'inconsistent pagination was accepted');
+    expect($failure_codes === ['invalid_record_pagination'], 'pagination failure reason was not retained');
+});
+
+test('publication sync returns bounded materialization failure codes', function (): void {
+    dbt_reset();
+    unset($GLOBALS['dbt']['options'][Settings::SERVICE_AUTHOR_OPTION]);
+    $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/bridge-records.json?page=1'] = dbt_response(200, [
+        'bridge_records' => [valid_record()],
+        'pagination' => ['page' => 1, 'pages' => 1, 'total' => 1, 'snapshot' => 'snap'],
+    ]);
+    $failure_codes = [];
+    $totals = Materializer::sync($failure_codes);
+    expect($totals['failed'] === 1, 'materialization failure was not counted');
+    expect($failure_codes === ['discussionbridge_materialization_service_author'], 'materialization failure reason was not retained');
 });
 
 test('block and shortcode render sanitized credential-free From Discourse content', function (): void {
