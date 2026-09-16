@@ -74,8 +74,8 @@ final class Admin
     public static function operator_result_label(string $outcome, string $reason): string
     {
         return match ($outcome) {
-            'materialized' => __('Post created', 'discussionbridge'),
-            'updated' => __('Post updated', 'discussionbridge'),
+            'materialized' => __('WordPress post created', 'discussionbridge'),
+            'updated' => __('WordPress post updated', 'discussionbridge'),
             'created' => __('Discourse topic created', 'discussionbridge'),
             'resolved' => $reason === 'existing_bridge_record'
                 ? __('Existing Discourse topic found', 'discussionbridge')
