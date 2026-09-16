@@ -95,11 +95,15 @@ final class Materializer
         }
         $post_id = $existing ? (int) $existing[0] : 0;
         if ($post_id > 0) {
-            if ((string) get_post_meta($post_id, self::META_PREFIX . 'canonical_url', true) !== $canonical_url) {
-                return new WP_Error('discussionbridge_materialization_identity_drift', 'The Bridge Record canonical URL changed.');
+            $previous_url = (string) get_post_meta($post_id, self::META_PREFIX . 'canonical_url', true);
+            if ($previous_url !== $canonical_url
+                && (!self::verified_url_migration($record, $previous_url, $canonical_url)
+                    || untrailingslashit((string) get_permalink($post_id)) !== untrailingslashit($canonical_url))) {
+                return new WP_Error('discussionbridge_materialization_identity_drift', 'The Bridge Record canonical URL changed without a verified migration of this WordPress post.');
             }
             $post = get_post($post_id);
-            if ((string) get_post_meta($post_id, self::META_PREFIX . 'source_revision', true) === $revision
+            if ($previous_url === $canonical_url
+                && (string) get_post_meta($post_id, self::META_PREFIX . 'source_revision', true) === $revision
                 && $post instanceof \WP_Post
                 && (int) $post->post_author === $service_author_id
                 && (string) $post->post_content === $materialized_content) {
@@ -240,6 +244,25 @@ final class Materializer
             && strtolower((string) ($url['host'] ?? '')) === strtolower((string) ($home['host'] ?? ''))
             && (int) ($url['port'] ?? 443) === (int) ($home['port'] ?? 443)
             && empty($url['user']) && empty($url['pass']) && empty($url['query']) && empty($url['fragment']);
+    }
+
+    private static function verified_url_migration(array $record, string $old_url, string $new_url): bool
+    {
+        foreach ($record['bindings'] ?? [] as $binding) {
+            if (!is_array($binding) || ($binding['role'] ?? null) !== 'presentation' || ($binding['state'] ?? null) !== 'active') {
+                continue;
+            }
+            $proof = $binding['url_migration'] ?? null;
+            return is_array($proof)
+                && ($proof['old_url'] ?? null) === $old_url
+                && ($proof['new_url'] ?? null) === $new_url
+                && in_array($proof['redirect_status'] ?? null, [301, 308], true)
+                && is_string($proof['verified_at'] ?? null)
+                && strtotime($proof['verified_at']) !== false
+                && self::same_site_url($old_url)
+                && self::same_site_url($new_url);
+        }
+        return false;
     }
 
     private static function native_materialization_authorized(array $record): bool

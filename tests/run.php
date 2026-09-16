@@ -179,6 +179,26 @@ test('materialization fails closed on missing author, collision and identity dri
     expect_error(Materializer::materialize($record), 'discussionbridge_materialization_identity_drift');
 });
 
+test('verified URL migration adopts the same already-moved WordPress post', function (): void {
+    dbt_reset();
+    $record = valid_record();
+    expect(Materializer::materialize($record) === 'created');
+    $old_url = $record['bindings'][0]['canonical_url'];
+    $new_url = 'https://wordpress.example/moved-from-the-bridge/';
+    $record['bindings'][0]['canonical_url'] = $new_url;
+    $record['bindings'][0]['url_migration'] = [
+        'old_url' => $old_url, 'new_url' => $new_url,
+        'redirect_status' => 301, 'verified_at' => '2026-09-16T12:00:00.000000Z',
+    ];
+    expect_error(Materializer::materialize($record), 'discussionbridge_materialization_identity_drift');
+    $GLOBALS['dbt']['posts'][100]->post_name = 'moved-from-the-bridge';
+    expect(Materializer::materialize($record) === 'updated');
+    expect(count($GLOBALS['dbt']['posts']) === 1);
+    expect(get_post_meta(100, '_discussionbridge_resource_id', true) === $record['resource_id']);
+    expect(get_post_meta(100, '_discussionbridge_canonical_url', true) === $new_url);
+    expect(Materializer::materialize($record) === 'unchanged');
+});
+
 test('materialization never reports success when WordPress cannot publish the draft', function (): void {
     dbt_reset();
     $GLOBALS['dbt']['wp_update_callback'] = fn(array $data): WP_Error => new WP_Error('publish_failed', 'publish failed');
