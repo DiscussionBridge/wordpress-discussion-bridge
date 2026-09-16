@@ -152,6 +152,27 @@ test('materialization supports a WordPress-generated dated permalink', function 
     expect(Materializer::materialize($record) === 'unchanged');
 });
 
+test('updating a mapped dated post preserves its authorized publication date', function (): void {
+    dbt_reset();
+    $record = valid_record();
+    expect(Materializer::materialize($record) === 'created');
+    $post = $GLOBALS['dbt']['posts'][100];
+    $post->post_date = '2026-09-14 20:58:09';
+    $post->post_date_gmt = '2026-09-14 20:58:09';
+    $GLOBALS['dbt']['dated_permalinks'] = true;
+    $record['bindings'][0]['canonical_url'] = 'https://wordpress.example/2026/09/14/from-the-bridge/';
+    update_post_meta(100, '_discussionbridge_canonical_url', $record['bindings'][0]['canonical_url']);
+    $record['source']['revision'] = 'post:99:version:4';
+    $record['source']['post_version'] = 4;
+    $result = Materializer::materialize($record);
+    expect($result === 'updated', 'expected updated, got ' . ($result instanceof WP_Error ? $result->get_error_code() : $result));
+    expect($post->post_date === '2026-09-14 20:58:09', 'post_date changed');
+    expect($post->post_date_gmt === '2026-09-14 20:58:09', 'post_date_gmt changed');
+    expect(get_permalink(100) === $record['bindings'][0]['canonical_url'], 'dated permalink changed');
+    expect(count($GLOBALS['dbt']['posts']) === 1, 'duplicate mapped post');
+    expect(Materializer::materialize($record) === 'unchanged', 'exact retry was not unchanged');
+});
+
 test('same-revision materialization repairs a legacy authorless post without changing identity', function (): void {
     dbt_reset(); $record = valid_record();
     expect(Materializer::materialize($record) === 'created');
@@ -196,6 +217,32 @@ test('verified URL migration adopts the same already-moved WordPress post', func
     expect(Materializer::materialize($record) === 'updated');
     expect(count($GLOBALS['dbt']['posts']) === 1);
     expect(get_post_meta(100, '_discussionbridge_resource_id', true) === $record['resource_id']);
+    expect(get_post_meta(100, '_discussionbridge_canonical_url', true) === $new_url);
+    expect(Materializer::materialize($record) === 'unchanged');
+});
+
+test('verified dated URL migration keeps its original date and mapped post', function (): void {
+    dbt_reset();
+    $record = valid_record();
+    expect(Materializer::materialize($record) === 'created');
+    $post = $GLOBALS['dbt']['posts'][100];
+    $post->post_date = '2026-09-14 20:58:09';
+    $post->post_date_gmt = '2026-09-14 20:58:09';
+    $GLOBALS['dbt']['dated_permalinks'] = true;
+    $old_url = 'https://wordpress.example/2026/09/14/from-the-bridge/';
+    $new_url = 'https://wordpress.example/2026/09/14/from-the-bridge-moved/';
+    update_post_meta(100, '_discussionbridge_canonical_url', $old_url);
+    $post->post_name = 'from-the-bridge-moved';
+    $record['bindings'][0]['canonical_url'] = $new_url;
+    $record['bindings'][0]['url_migration'] = [
+        'old_url' => $old_url, 'new_url' => $new_url,
+        'redirect_status' => 301, 'verified_at' => '2026-09-16T12:00:00.000000Z',
+    ];
+    $record['source']['revision'] = 'post:99:version:4';
+    $record['source']['post_version'] = 4;
+    expect(Materializer::materialize($record) === 'updated');
+    expect(get_permalink(100) === $new_url);
+    expect(count($GLOBALS['dbt']['posts']) === 1);
     expect(get_post_meta(100, '_discussionbridge_canonical_url', true) === $new_url);
     expect(Materializer::materialize($record) === 'unchanged');
 });

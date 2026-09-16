@@ -122,9 +122,11 @@ final class Materializer
                 return new WP_Error('discussionbridge_materialization_identity_drift', 'The Bridge Record canonical URL changed without a verified migration of this WordPress post.');
             }
             $post = get_post($post_id);
+            if (!$post instanceof \WP_Post) {
+                return new WP_Error('discussionbridge_materialization_missing_post', 'The mapped WordPress post no longer exists.');
+            }
             if ($previous_url === $canonical_url
                 && (string) get_post_meta($post_id, self::META_PREFIX . 'source_revision', true) === $revision
-                && $post instanceof \WP_Post
                 && (int) $post->post_author === $service_author_id
                 && (string) $post->post_content === $materialized_content) {
                 return 'unchanged';
@@ -149,6 +151,12 @@ final class Materializer
             'post_content' => $materialized_content,
             'post_author' => $service_author_id,
         ];
+        if (!$creating) {
+            // A dated permalink is part of the authorized identity. WordPress may
+            // otherwise replace the date with "now" when updating an existing post.
+            $postarr['post_date'] = $post->post_date;
+            $postarr['post_date_gmt'] = $post->post_date_gmt;
+        }
         $saved = wp_insert_post($postarr, true);
         if (is_wp_error($saved)) {
             return $saved;
