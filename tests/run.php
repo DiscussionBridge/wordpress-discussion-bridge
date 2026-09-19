@@ -31,9 +31,13 @@ function valid_record(string $resource = '22222222-2222-4222-8222-222222222222')
 
 test('package, plugin, block and asset versions agree', function (): void {
     $plugin = file_get_contents(__DIR__ . '/../wordpress-discussion-bridge.php');
+    $admin = file_get_contents(__DIR__ . '/../src/Admin.php');
     $block = json_decode((string) file_get_contents(__DIR__ . '/../blocks/from-discourse/block.json'), true);
     $asset = require __DIR__ . '/../blocks/from-discourse/index.asset.php';
     expect(str_contains((string) $plugin, 'Version: ' . DISCUSSIONBRIDGE_WORDPRESS_VERSION));
+    expect(str_contains((string) $admin, 'Advanced category route'));
+    expect(str_contains((string) $admin, 'matching advanced route; otherwise leave blank'));
+    expect(!str_contains((string) $admin, "__('Lane', 'discussionbridge')"));
     expect(($block['version'] ?? null) === DISCUSSIONBRIDGE_WORDPRESS_VERSION);
     expect(($asset['version'] ?? null) === DISCUSSIONBRIDGE_WORDPRESS_VERSION);
 });

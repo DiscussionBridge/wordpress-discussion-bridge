@@ -237,8 +237,11 @@ final class Admin
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="discussionbridge_lane"><?php echo esc_html__('Lane', 'discussionbridge'); ?></label></th>
-                        <td><input class="regular-text" type="text" id="discussionbridge_lane" name="<?php echo esc_attr(Settings::LANE_OPTION); ?>" value="<?php echo esc_attr(Settings::lane()); ?>"></td>
+                        <th scope="row"><label for="discussionbridge_lane"><?php echo esc_html__('Advanced category route', 'discussionbridge'); ?></label></th>
+                        <td>
+                            <input class="regular-text" type="text" id="discussionbridge_lane" name="<?php echo esc_attr(Settings::LANE_OPTION); ?>" value="<?php echo esc_attr(Settings::lane()); ?>">
+                            <p class="description"><?php echo esc_html__('Optional. Use only when the Discourse connection has a matching advanced route; otherwise leave blank.', 'discussionbridge'); ?></p>
+                        </td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="discussionbridge_service_author"><?php echo esc_html__('From Discourse service author', 'discussionbridge'); ?></label></th>
