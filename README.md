@@ -59,10 +59,12 @@ python3 scripts/verify-release-reproducibility.py
 ```
 
 The first command writes `dist/wordpress-discussion-bridge-<version>.zip` and
-prints its SHA-256 identity. The second builds the same commit from LF and CRLF
-checkouts and fails unless both ZIPs are byte-identical. GitHub Actions runs the
-same proof alongside the adapter tests; release candidates must use that
-generated artifact rather than a ZIP assembled from a working directory.
+prints its SHA-256 identity. The second builds the same commit from checkouts
+configured with `core.autocrlf=false` and `core.autocrlf=true`; repository
+attributes intentionally normalize tracked text to LF. The check fails unless
+both ZIPs are byte-identical. GitHub Actions runs the same proof alongside the
+adapter tests; release candidates must use that generated artifact rather than
+a ZIP assembled from a working directory.
 
 Configure the Discourse HTTPS origin, `dbc_…` connection ID, optional advanced
 category route, and published post types under **Settings → DiscussionBridge**.

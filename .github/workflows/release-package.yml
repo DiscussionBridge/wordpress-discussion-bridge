@@ -17,10 +17,10 @@ jobs:
   package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
         with:
           php-version: "8.1"
       - name: Run adapter tests
@@ -31,7 +31,7 @@ jobs:
         run: python3 scripts/verify-release-reproducibility.py
       - name: Build release artifact
         run: python3 scripts/build-release.py
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: wordpress-discussion-bridge-${{ github.sha }}
           path: dist/*.zip

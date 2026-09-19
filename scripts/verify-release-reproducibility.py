@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove release ZIP equality across LF and CRLF working-tree checkouts."""
+"""Prove release ZIP equality across differing Git line-ending configurations."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="discussionbridge-wp-release-") as temporary:
         root = Path(temporary)
         outputs = []
-        for name, autocrlf in (("lf", "false"), ("crlf", "true")):
+        for name, autocrlf in (("autocrlf-false", "false"), ("autocrlf-true", "true")):
             checkout = root / name
             run("git", "clone", "--quiet", "--no-hardlinks", str(source), str(checkout))
             run("git", "config", "core.autocrlf", autocrlf, cwd=checkout)
