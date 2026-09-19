@@ -393,8 +393,17 @@ test('admin credential storage rejects copied panels and malformed secrets', fun
 });
 
 test('connection secret and lane match the receiver admission grammar', function (): void {
+    dbt_reset();
     expect(Settings::sanitize_lane('articles') === 'articles', 'valid lane rejected');
     expect(Settings::sanitize_lane('Bad Lane') === '', 'invalid lane accepted');
+    expect(
+        $GLOBALS['dbt']['settings_errors'] === [[
+            Settings::LANE_OPTION,
+            'invalid_lane',
+            'DiscussionBridge advanced category route is invalid.',
+        ]],
+        'invalid advanced category route did not use operator-facing vocabulary'
+    );
     $validator = new ReflectionMethod(Settings::class, 'validated_secret');
     expect($validator->invoke(null, str_repeat('s', 42)) === '', 'short secret accepted');
     expect($validator->invoke(null, str_repeat('é', 129)) === '', 'oversized byte secret accepted');

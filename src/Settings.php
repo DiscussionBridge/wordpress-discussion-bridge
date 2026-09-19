@@ -261,7 +261,11 @@ final class Settings
         if ($value === '' || preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $value) === 1) {
             return $value;
         }
-        add_settings_error(self::LANE_OPTION, 'invalid_lane', 'DiscussionBridge lane is invalid.');
+        add_settings_error(
+            self::LANE_OPTION,
+            'invalid_lane',
+            'DiscussionBridge advanced category route is invalid.'
+        );
         return '';
     }
 
