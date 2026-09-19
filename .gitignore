@@ -1,4 +1,4 @@
 /.phpunit.cache/
 /vendor/
+__pycache__/
 *.zip
-

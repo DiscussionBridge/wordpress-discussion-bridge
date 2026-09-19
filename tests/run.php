@@ -31,9 +31,13 @@ function valid_record(string $resource = '22222222-2222-4222-8222-222222222222')
 
 test('package, plugin, block and asset versions agree', function (): void {
     $plugin = file_get_contents(__DIR__ . '/../wordpress-discussion-bridge.php');
+    $admin = file_get_contents(__DIR__ . '/../src/Admin.php');
     $block = json_decode((string) file_get_contents(__DIR__ . '/../blocks/from-discourse/block.json'), true);
     $asset = require __DIR__ . '/../blocks/from-discourse/index.asset.php';
     expect(str_contains((string) $plugin, 'Version: ' . DISCUSSIONBRIDGE_WORDPRESS_VERSION));
+    expect(str_contains((string) $admin, 'Advanced category route'));
+    expect(str_contains((string) $admin, 'matching advanced route; otherwise leave blank'));
+    expect(!str_contains((string) $admin, "__('Lane', 'discussionbridge')"));
     expect(($block['version'] ?? null) === DISCUSSIONBRIDGE_WORDPRESS_VERSION);
     expect(($asset['version'] ?? null) === DISCUSSIONBRIDGE_WORDPRESS_VERSION);
 });
@@ -101,7 +105,7 @@ test('configured WP Discourse blocks delivery before network', function (): void
 });
 
 test('delivery uses stable identity, protected header and validates success', function (): void {
-    dbt_reset(); configured_post();
+    dbt_reset(); $post = configured_post();
     $success = ['outcome' => 'created', 'resource_id' => '33333333-3333-4333-8333-333333333333', 'topic_id' => 12,
         'topic_url' => 'https://bridge.example/t/bridge-post/12', 'core_fallback' => false];
     $url = 'https://bridge.example/discussion-bridge/v1/bridge-records/resolve.json';
@@ -115,6 +119,20 @@ test('delivery uses stable identity, protected header and validates success', fu
     expect(($first['headers']['X-DiscussionBridge-Secret'] ?? '') === str_repeat('s', 43));
     expect(!str_contains($first['body'], str_repeat('s', 43)), 'secret leaked into request body');
     expect(get_post_meta(1, '_discussionbridge_status', true) === 'healthy');
+    $post->post_name = 'bridge-post-moved';
+    $GLOBALS['dbt']['responses'][$url] = dbt_response(200, array_merge($success, ['outcome' => 'resolved']));
+    Publisher::deliver(1);
+    $moved = json_decode($GLOBALS['dbt']['requests'][2][1]['body'], true)['bridge_record'];
+    expect($moved['external_id'] === $a['external_id'], 'a slug move changed the native post identity');
+    expect($moved['canonical_url'] === 'https://wordpress.example/bridge-post-moved/');
+    expect(get_post_meta(1, '_discussionbridge_resource_id', true) === $success['resource_id']);
+    expect(get_post_meta(1, '_discussionbridge_topic_id', true) === 12);
+    $GLOBALS['dbt']['responses'][$url] = dbt_response(200, array_merge($success, [
+        'outcome' => 'resolved', 'topic_id' => 13, 'topic_url' => 'https://bridge.example/t/bridge-post/13',
+    ]));
+    Publisher::deliver(1);
+    expect(get_post_meta(1, '_discussionbridge_last_reason', true) === 'returned_identity_mismatch');
+    expect(get_post_meta(1, '_discussionbridge_topic_id', true) === 12);
     $GLOBALS['dbt']['responses'][$url] = dbt_response(200, array_merge($success, ['core_fallback' => true]));
     Publisher::deliver(1);
     expect(get_post_meta(1, '_discussionbridge_last_reason', true) === 'invalid_success_response');
@@ -374,9 +392,18 @@ test('admin credential storage rejects copied panels and malformed secrets', fun
     expect(count($GLOBALS['dbt']['settings_errors']) === 2, 'malformed secret errors were not reported');
 });
 
-test('connection secret and lane match the receiver admission grammar', function (): void {
+test('connection secret and advanced category route match the receiver admission grammar', function (): void {
+    dbt_reset();
     expect(Settings::sanitize_lane('articles') === 'articles', 'valid lane rejected');
     expect(Settings::sanitize_lane('Bad Lane') === '', 'invalid lane accepted');
+    expect(
+        $GLOBALS['dbt']['settings_errors'] === [[
+            Settings::LANE_OPTION,
+            'invalid_lane',
+            'DiscussionBridge advanced category route is invalid.',
+        ]],
+        'invalid advanced category route did not use operator-facing vocabulary'
+    );
     $validator = new ReflectionMethod(Settings::class, 'validated_secret');
     expect($validator->invoke(null, str_repeat('s', 42)) === '', 'short secret accepted');
     expect($validator->invoke(null, str_repeat('é', 129)) === '', 'oversized byte secret accepted');
