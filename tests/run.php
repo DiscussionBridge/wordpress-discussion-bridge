@@ -392,7 +392,7 @@ test('admin credential storage rejects copied panels and malformed secrets', fun
     expect(count($GLOBALS['dbt']['settings_errors']) === 2, 'malformed secret errors were not reported');
 });
 
-test('connection secret and lane match the receiver admission grammar', function (): void {
+test('connection secret and advanced category route match the receiver admission grammar', function (): void {
     dbt_reset();
     expect(Settings::sanitize_lane('articles') === 'articles', 'valid lane rejected');
     expect(Settings::sanitize_lane('Bad Lane') === '', 'invalid lane accepted');

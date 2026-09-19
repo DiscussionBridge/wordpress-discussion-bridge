@@ -47,8 +47,26 @@ Current Alpha slice:
 - builds a credential-free **On this page** navigation from two or more `h2` or
   `h3` headings in either WordPress-authored or From Discourse content.
 
-Configure the Discourse HTTPS origin, `dbc_…` connection ID, lane, and
-published post types under **Settings → DiscussionBridge**. Prefer these
+## Reproducible release package
+
+Release ZIPs are built from committed Git blobs, not working-tree files. This
+keeps package bytes independent of Windows or Unix line-ending conversion and
+fixes ZIP entry order, timestamps, permissions, and storage method.
+
+```bash
+python3 scripts/build-release.py --treeish HEAD
+python3 scripts/verify-release-reproducibility.py
+```
+
+The first command writes `dist/wordpress-discussion-bridge-<version>.zip` and
+prints its SHA-256 identity. The second builds the same commit from LF and CRLF
+checkouts and fails unless both ZIPs are byte-identical. GitHub Actions runs the
+same proof alongside the adapter tests; release candidates must use that
+generated artifact rather than a ZIP assembled from a working directory.
+
+Configure the Discourse HTTPS origin, `dbc_…` connection ID, optional advanced
+category route, and published post types under **Settings → DiscussionBridge**.
+Prefer these
 protected server constants for credentials:
 
 ```php

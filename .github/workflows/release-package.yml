@@ -1,0 +1,38 @@
+name: Reproducible release package
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - codex/publication-url-ownership
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+      - name: Run adapter tests
+        run: php tests/run.php
+      - name: Validate PHP syntax
+        run: find . -path ./.git -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Prove cross-checkout package reproducibility
+        run: python3 scripts/verify-release-reproducibility.py
+      - name: Build release artifact
+        run: python3 scripts/build-release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wordpress-discussion-bridge-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
