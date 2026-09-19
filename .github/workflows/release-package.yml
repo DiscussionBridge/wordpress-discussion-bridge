@@ -17,7 +17,7 @@ jobs:
   package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: shivammathur/setup-php@v2
@@ -31,7 +31,7 @@ jobs:
         run: python3 scripts/verify-release-reproducibility.py
       - name: Build release artifact
         run: python3 scripts/build-release.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: wordpress-discussion-bridge-${{ github.sha }}
           path: dist/*.zip
