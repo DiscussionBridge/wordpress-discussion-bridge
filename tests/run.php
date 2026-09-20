@@ -700,9 +700,9 @@ test('forum synchronization materializes and acknowledges an exact native WordPr
             'source_topic' => $current_item + ['content_html' => '<h2>Policy</h2><p>Forum-owned content.</p>'],
         ]);
     };
-    ForumPublisher::poll();
+    ForumPublisher::start();
     ForumPublisher::run_batch();
-    expect($detail_fetches === 0, 'unchanged recurring scan fetched full source content');
+    expect($detail_fetches === 0, 'unchanged operator scan fetched full source content');
     expect(ForumPublisher::state()['unchanged'] === 1);
     ForumPublisher::run_batch();
 
@@ -741,8 +741,8 @@ test('forum synchronization materializes and acknowledges an exact native WordPr
                 $body['acknowledgement']
             ));
     };
-    ForumPublisher::poll();
-    expect(ForumPublisher::state()['status'] === 'queued', 'recurring poll did not queue the next scan');
+    ForumPublisher::start();
+    expect(ForumPublisher::state()['status'] === 'queued', 'operator sync did not queue the next scan');
     ForumPublisher::run_batch();
     expect(get_post(100)?->post_content === '<p>Manual drift</p>', 'wrong resolve resource was not rolled back');
     expect($update_ack_attempts === 0, 'wrong resolve resource reached acknowledgement');
@@ -753,6 +753,117 @@ test('forum synchronization materializes and acknowledges an exact native WordPr
     expect(get_post_meta(100, '_discussionbridge_forum_canonical_url', true) === get_permalink(100));
     expect(get_post_meta(100, '_discussionbridge_forum_source_profile_url', true) === 'https://bridge.example/u/phil');
     expect(ForumPublisher::state()['updated'] === 1, 'native drift was not repaired and acknowledged');
+});
+
+test('automatic polling claims and acknowledges one exact incremental publication lease', function (): void {
+    dbt_reset();
+    $state = ForumPublisher::initial_state();
+    $state['status'] = 'complete';
+    $state['initial_backfill_complete'] = true;
+    update_option(ForumPublisher::STATE_OPTION, $state, false);
+
+    $lease = str_repeat('a', 64);
+    $claim_count = 0;
+    $claim_url = 'https://bridge.example/discussion-bridge/v1/publication-work/claim.json';
+    $GLOBALS['dbt']['responses'][$claim_url] = static function () use (&$claim_count, $lease): array {
+        $claim_count++;
+        return dbt_response(200, [
+            'publication_work' => $claim_count === 1 ? [
+                'topic_id' => 42,
+                'resource_id' => null,
+                'action' => 'publish',
+                'reason' => 'new_publication',
+                'lease_token' => $lease,
+                'attempt_count' => 1,
+            ] : null,
+        ]);
+    };
+    $destination = [
+        'state' => 'ready',
+        'reasons' => [],
+        'catalog_revision' => str_repeat('c', 64),
+        'mapping_revision' => str_repeat('m', 64),
+        'destination_container_id' => 'post_type:post',
+        'destination_terms' => [],
+        'presentation_mode' => 'full',
+        'authorship_policy' => 'fixed',
+        'destination_author_id' => 'user:9',
+        'slug_policy' => 'topic_id',
+    ];
+    $source = [
+        'topic_id' => 42,
+        'topic_url' => 'https://bridge.example/t/forum-policy-guide/42',
+        'title' => 'Forum policy guide',
+        'content_html' => '<h2>Policy</h2><p>Incremental forum content.</p>',
+        'author' => [
+            'username' => 'phil',
+            'name' => 'Phil',
+            'profile_url' => 'https://bridge.example/u/phil',
+        ],
+        'source_revision' => 'post:99:version:4',
+        'publication_revision' => str_repeat('q', 64),
+        'destination' => $destination,
+        'publication' => null,
+    ];
+    $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/source-topics/42.json'] =
+        dbt_response(200, ['eligible' => true, 'source_topic' => $source]);
+    $resource_id = '99999999-9999-4999-8999-999999999999';
+    $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/source-topics/42/resolve.json'] =
+        static function (string $url, array $args) use ($resource_id): array {
+            unset($url);
+            $body = json_decode((string) $args['body'], true);
+            return dbt_response(201, forum_resolve_result($body['publication'], $resource_id));
+        };
+    $GLOBALS['dbt']['responses'][
+        'https://bridge.example/discussion-bridge/v1/bridge-records/' . $resource_id . '/acknowledgement.json'
+    ] = static function (string $url, array $args) use ($lease, $resource_id): array {
+        unset($url);
+        $body = json_decode((string) $args['body'], true);
+        expect(($body['acknowledgement']['lease_token'] ?? '') === $lease, 'claim lease was not acknowledged');
+        return dbt_response(200, forum_acknowledgement_result($resource_id, $body['acknowledgement']));
+    };
+
+    ForumPublisher::poll();
+
+    expect($claim_count === 2, 'incremental worker did not drain the available queue');
+    expect(get_post(100)?->post_content === '<h2>Policy</h2><p>Incremental forum content.</p>');
+    $state = ForumPublisher::state();
+    expect($state['incremental_processed'] === 1);
+    expect($state['last_incremental_error'] === null);
+});
+
+test('automatic polling reports an incremental delivery failure with its exact lease', function (): void {
+    dbt_reset();
+    $state = ForumPublisher::initial_state();
+    $state['status'] = 'complete';
+    $state['initial_backfill_complete'] = true;
+    update_option(ForumPublisher::STATE_OPTION, $state, false);
+
+    $lease = str_repeat('b', 64);
+    $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/publication-work/claim.json'] =
+        dbt_response(200, ['publication_work' => [
+            'topic_id' => 51,
+            'resource_id' => null,
+            'action' => 'publish',
+            'reason' => 'source_changed',
+            'lease_token' => $lease,
+            'attempt_count' => 1,
+        ]]);
+    $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/source-topics/51.json'] =
+        dbt_response(503, ['outcome' => 'rejected', 'reason' => 'temporarily_unavailable']);
+    $failure_url = 'https://bridge.example/discussion-bridge/v1/publication-work/failure.json';
+    $GLOBALS['dbt']['responses'][$failure_url] = static function (string $url, array $args) use ($lease): array {
+        unset($url);
+        $body = json_decode((string) $args['body'], true);
+        $failure = $body['publication_work_failure'] ?? [];
+        expect(($failure['lease_token'] ?? '') === $lease, 'failure did not identify its lease');
+        expect(($failure['error_code'] ?? '') === 'discussionbridge_temporarily_unavailable');
+        return dbt_response(200, ['outcome' => 'recorded']);
+    };
+
+    ForumPublisher::poll();
+
+    expect(ForumPublisher::state()['last_incremental_error'] === 'discussionbridge_temporarily_unavailable');
 });
 
 test('forum synchronization adopts the exact legacy materialized post instead of creating a duplicate', function (): void {

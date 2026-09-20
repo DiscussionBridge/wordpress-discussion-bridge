@@ -128,6 +128,16 @@ second post. The status line exposes processed, created, updated, unchanged,
 held, and failed counts plus bounded non-secret attention codes. Starting a new
 run is safe and idempotent; it does not require topic-by-topic authorization.
 
+That source-feed scan is the bounded initial backfill or an explicit operator
+restart—not the steady-state polling strategy. After the initial backfill,
+each five-minute poll atomically claims at most 20 changed or withdrawn topics
+from the receiver's durable publication queue. The exact five-minute receiver
+lease is included in the successful Bridge Record acknowledgement. A native
+WordPress failure is reported against that lease; the receiver performs at
+most three automatic attempts before placing the item in central operator
+attention. WordPress never silently drops the item or starts another
+forum-wide crawl to conceal a failed update.
+
 The durable OBBBA demo must not rely on reader traffic to trigger WP-Cron. Its
 operator runbook must install and verify a real scheduler that invokes
 `wp-cron.php` (or `wp cron event run --due-now`) on a bounded interval. The

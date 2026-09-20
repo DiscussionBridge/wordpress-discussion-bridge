@@ -14,6 +14,7 @@ final class Client
     private const CATALOG_STATUS_RESPONSE_BYTES = 1024 * 1024;
     private const MAX_REQUEST_BYTES = 262144;
     private const TIMEOUT_SECONDS = 10;
+    private ?string $publication_lease_token = null;
 
     /** @return array<string, mixed>|WP_Error */
     public function resolve(array $bridge_record): array|WP_Error
@@ -127,6 +128,64 @@ final class Client
     }
 
     /** @return array<string, mixed>|WP_Error */
+    public function claim_publication_work(int $lease_seconds = 300): array|WP_Error
+    {
+        $this->publication_lease_token = null;
+        if ($lease_seconds < 300 || $lease_seconds > 3600) {
+            return new WP_Error(
+                'discussionbridge_invalid_lease_duration',
+                'DiscussionBridge publication lease duration is invalid.'
+            );
+        }
+        $response = $this->request('POST', '/discussion-bridge/v1/publication-work/claim.json', [
+            'lease_seconds' => $lease_seconds,
+        ]);
+        if (is_wp_error($response) || ($response['publication_work'] ?? null) === null) {
+            return $response;
+        }
+        $work = $response['publication_work'];
+        $token = is_array($work) ? ($work['lease_token'] ?? null) : null;
+        if (!is_array($work)
+            || !in_array($work['action'] ?? null, ['publish', 'unpublish'], true)
+            || !is_int($work['topic_id'] ?? null)
+            || $work['topic_id'] <= 0
+            || !is_string($token)
+            || preg_match('/^[a-f0-9]{64}$/', $token) !== 1) {
+            return new WP_Error(
+                'discussionbridge_invalid_publication_work',
+                'DiscussionBridge returned invalid publication work.'
+            );
+        }
+        $this->publication_lease_token = $token;
+        return $response;
+    }
+
+    public function clear_publication_lease(): void
+    {
+        $this->publication_lease_token = null;
+    }
+
+    /** @return array<string, mixed>|WP_Error */
+    public function fail_publication_work(string $error_code, string $error_detail = ''): array|WP_Error
+    {
+        if ($this->publication_lease_token === null
+            || preg_match('/^[a-z0-9_-]{1,64}$/', $error_code) !== 1
+            || strlen($error_detail) > 1000) {
+            return new WP_Error(
+                'discussionbridge_invalid_publication_failure',
+                'DiscussionBridge publication failure data is invalid.'
+            );
+        }
+        return $this->request('PUT', '/discussion-bridge/v1/publication-work/failure.json', [
+            'publication_work_failure' => [
+                'lease_token' => $this->publication_lease_token,
+                'error_code' => $error_code,
+                'error_detail' => $error_detail,
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed>|WP_Error */
     public function resolve_source_topic(int $topic_id, array $publication): array|WP_Error
     {
         if ($topic_id <= 0) {
@@ -144,6 +203,9 @@ final class Client
     {
         if (!wp_is_uuid($resource_id)) {
             return new WP_Error('discussionbridge_invalid_resource_id', 'The DiscussionBridge resource ID is invalid.');
+        }
+        if ($this->publication_lease_token !== null) {
+            $acknowledgement['lease_token'] = $this->publication_lease_token;
         }
         return $this->request(
             'PUT',

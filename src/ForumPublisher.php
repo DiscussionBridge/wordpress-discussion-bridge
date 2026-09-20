@@ -16,6 +16,7 @@ final class ForumPublisher
     private const MAX_FAILURE_QUEUE = 1000;
     private const LOCK_TTL_SECONDS = 900;
     private const POLL_INTERVAL_SECONDS = 300;
+    private const MAX_INCREMENTAL_WORK_PER_POLL = 20;
     private const INTEGRITY_AUDIT_INTERVAL_SECONDS = 86400;
     private const META_PREFIX = '_discussionbridge_forum_';
     private const ADOPTION_RESOURCE_META = '_discussionbridge_forum_adoption_resource_id';
@@ -46,6 +47,10 @@ final class ForumPublisher
             'failure_codes' => [],
             'started_at' => null,
             'completed_at' => null,
+            'initial_backfill_complete' => false,
+            'incremental_processed' => 0,
+            'last_incremental_poll_at' => null,
+            'last_incremental_error' => null,
         ];
     }
 
@@ -135,12 +140,122 @@ final class ForumPublisher
     {
         try {
             $state = self::state();
-            if (Settings::ready() && !in_array($state['status'], ['queued', 'running'], true)) {
-                self::start();
+            if (!Settings::ready() || in_array($state['status'], ['queued', 'running'], true)) {
+                return;
             }
+            if (!($state['initial_backfill_complete'] ?? false)) {
+                self::start();
+                return;
+            }
+            self::run_incremental_queue();
         } finally {
             self::ensure_poll_scheduled();
         }
+    }
+
+    private static function run_incremental_queue(): void
+    {
+        $token = wp_generate_uuid4();
+        if (!self::acquire_lock($token, 'incremental')) {
+            return;
+        }
+        self::$active_lock_token = $token;
+        $client = new Client();
+        $state = self::state();
+        try {
+            $state['last_incremental_poll_at'] = gmdate('c');
+            $state['last_incremental_error'] = null;
+            for ($processed = 0; $processed < self::MAX_INCREMENTAL_WORK_PER_POLL; $processed++) {
+                self::renew_lock();
+                $claimed = $client->claim_publication_work();
+                if (is_wp_error($claimed)) {
+                    $state['last_incremental_error'] = $claimed->get_error_code();
+                    break;
+                }
+                $work = $claimed['publication_work'] ?? null;
+                if ($work === null) {
+                    break;
+                }
+
+                $result = self::process_claimed_work($client, $work);
+                if (is_wp_error($result)) {
+                    $code = sanitize_key($result->get_error_code());
+                    $detail = substr($result->get_error_message(), 0, 1000);
+                    $reported = $client->fail_publication_work(
+                        $code !== '' ? $code : 'wordpress_delivery_failed',
+                        $detail
+                    );
+                    $state['last_incremental_error'] = is_wp_error($reported)
+                        ? $reported->get_error_code()
+                        : ($code !== '' ? $code : 'wordpress_delivery_failed');
+                    $client->clear_publication_lease();
+                    break;
+                }
+
+                $client->clear_publication_lease();
+                $state['incremental_processed']++;
+                $state['processed']++;
+                $outcome = $result['outcome'] ?? 'unchanged';
+                if (isset($state[$outcome]) && is_int($state[$outcome])) {
+                    $state[$outcome]++;
+                }
+            }
+            self::store($state);
+        } finally {
+            $client->clear_publication_lease();
+            self::release_lock($token);
+            self::$active_lock_token = null;
+        }
+    }
+
+    /** @param array<string, mixed> $work
+     *  @return array{outcome:string,post_id:int}|WP_Error
+     */
+    private static function process_claimed_work(Client $client, array $work): array|WP_Error
+    {
+        $action = $work['action'] ?? null;
+        $topic_id = is_int($work['topic_id'] ?? null) ? $work['topic_id'] : 0;
+        if ($topic_id <= 0 || !in_array($action, ['publish', 'unpublish'], true)) {
+            return new WP_Error(
+                'discussionbridge_invalid_publication_work',
+                'DiscussionBridge returned invalid publication work.'
+            );
+        }
+
+        if ($action === 'publish') {
+            $detail = $client->source_topic($topic_id);
+            if (is_wp_error($detail)) {
+                return $detail;
+            }
+            $source = is_array($detail['source_topic'] ?? null) ? $detail['source_topic'] : null;
+            return $source !== null
+                ? self::materialize_topic($client, $source, $source)
+                : new WP_Error(
+                    'discussionbridge_source_topic_unavailable',
+                    'The claimed Discourse topic is no longer available for publication.'
+                );
+        }
+
+        $resource_id = is_string($work['resource_id'] ?? null) ? $work['resource_id'] : '';
+        if (!wp_is_uuid($resource_id)) {
+            return new WP_Error(
+                'discussionbridge_invalid_publication_work',
+                'The claimed publication does not identify a valid Bridge Record.'
+            );
+        }
+        $detail = $client->source_revocation($resource_id);
+        if (is_wp_error($detail)) {
+            return $detail;
+        }
+        $revocation = is_array($detail['publication_revocation'] ?? null)
+            ? $detail['publication_revocation']
+            : null;
+        return $revocation !== null
+            ? self::apply_revocation($client, $revocation)
+            : new WP_Error(
+                'discussionbridge_revocation_unavailable',
+                'The claimed publication withdrawal is no longer available.'
+            );
     }
 
     /** @param list<string> $args @param array<string, mixed> $assoc_args */
@@ -1438,6 +1553,7 @@ final class ForumPublisher
     {
         $state['status'] = $state['failed'] > 0 ? 'complete_with_attention' : 'complete';
         $state['completed_at'] = gmdate('c');
+        $state['initial_backfill_complete'] = true;
         self::store($state);
         self::ensure_poll_scheduled();
     }
