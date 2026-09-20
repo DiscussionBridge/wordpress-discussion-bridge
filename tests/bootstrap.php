@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.34';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.35';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error
@@ -116,7 +116,8 @@ function wp_is_post_revision(int $id): bool { return false; }
 function wp_is_post_autosave(int $id): bool { return false; }
 function wp_next_scheduled(string $hook, array $args = []): int|false { foreach ($GLOBALS['dbt']['scheduled'] as $item) if ($item[1] === $hook && $item[2] === $args) return $item[0]; return false; }
 function wp_schedule_single_event(int $timestamp, string $hook, array $args = []): bool { $GLOBALS['dbt']['scheduled'][] = [$timestamp, $hook, $args]; return true; }
-function get_permalink(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; $stored = $GLOBALS['dbt']['posts'][$id]; $slug = $stored->post_name ?: 'post-' . $id; $prefix = $GLOBALS['dbt']['dated_permalinks'] ? str_replace('-', '/', substr($stored->post_date, 0, 10)) . '/' : $GLOBALS['dbt']['permalink_prefix']; return 'https://wordpress.example/' . $prefix . $slug . '/'; }
+function get_permalink(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; $stored = $GLOBALS['dbt']['posts'][$id]; if (in_array($stored->post_status, ['auto-draft','draft','pending','future'], true)) return 'https://wordpress.example/?p=' . $id; $slug = $stored->post_name ?: 'post-' . $id; $prefix = $GLOBALS['dbt']['dated_permalinks'] ? str_replace('-', '/', substr($stored->post_date, 0, 10)) . '/' : $GLOBALS['dbt']['permalink_prefix']; return 'https://wordpress.example/' . $prefix . $slug . '/'; }
+function get_sample_permalink(WP_Post|int $post): array { $id = $post instanceof WP_Post ? $post->ID : $post; $stored = $GLOBALS['dbt']['posts'][$id]; $slug = $stored->post_name ?: sanitize_title($stored->post_title); $prefix = $GLOBALS['dbt']['dated_permalinks'] ? str_replace('-', '/', substr($stored->post_date, 0, 10)) . '/' : $GLOBALS['dbt']['permalink_prefix']; $token = $stored->post_type === 'page' ? '%pagename%' : '%postname%'; return ['https://wordpress.example/' . $prefix . $token . '/', $slug]; }
 function get_the_title(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; return $GLOBALS['dbt']['posts'][$id]->post_title ?? ''; }
 function parse_blocks(string $content): array { return [['blockName' => null, 'innerHTML' => $content, 'innerBlocks' => []]]; }
 function serialize_blocks(array $blocks): string { return implode('', array_map(fn($b) => (string) ($b['innerHTML'] ?? ''), $blocks)); }

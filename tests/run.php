@@ -625,6 +625,10 @@ test('forum synchronization materializes and acknowledges an exact native WordPr
         unset($url);
         $body = json_decode((string) $args['body'], true);
         expect(($body['publication']['external_id'] ?? '') === 'wordpress:post:100');
+        expect(
+            ($body['publication']['canonical_url'] ?? '') === 'https://wordpress.example/discourse-topic-42/',
+            'draft publication used its query-bearing draft permalink instead of its future canonical URL'
+        );
         expect(($body['publication']['destination']['destination_container_id'] ?? '') === 'post_type:post');
         return dbt_response(201, forum_resolve_result(
             $body['publication'],

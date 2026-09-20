@@ -557,8 +557,8 @@ final class ForumPublisher
             update_post_meta($post_id, self::META_PREFIX . 'destination', self::stable_json($destination));
             update_post_meta($post_id, self::META_PREFIX . 'status', 'pending');
         }
-        $canonical_url = get_permalink($post_id);
-        if (!is_string($canonical_url) || $canonical_url === '') {
+        $canonical_url = self::native_canonical_url($post_id);
+        if ($canonical_url === '') {
             if (!$creating) {
                 self::restore_native_snapshot($post_id, $snapshot);
             }
@@ -1023,6 +1023,28 @@ final class ForumPublisher
     private static function bounded_url(mixed $value): string
     {
         return is_string($value) && strlen($value) <= 2048 ? $value : '';
+    }
+
+    private static function native_canonical_url(int $post_id): string
+    {
+        $post = get_post($post_id);
+        if (!$post instanceof \WP_Post) {
+            return '';
+        }
+        if (!in_array($post->post_status, ['auto-draft', 'draft', 'pending', 'future'], true)) {
+            return self::bounded_url(get_permalink($post));
+        }
+
+        if (!function_exists('get_sample_permalink')) {
+            require_once ABSPATH . 'wp-admin/includes/post.php';
+        }
+        $sample = get_sample_permalink($post);
+        if (!is_array($sample) || count($sample) !== 2
+            || !is_string($sample[0]) || !is_string($sample[1]) || $sample[1] === '') {
+            return '';
+        }
+        $url = str_replace(['%postname%', '%pagename%'], $sample[1], $sample[0]);
+        return self::bounded_url($url);
     }
 
     /** @return array{username:string,name:string,profile_url:string}|null */
