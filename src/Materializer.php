@@ -60,6 +60,7 @@ final class Materializer
                 }
                 $seen_resources[$resource_id] = true;
                 if (!is_array($record) || ($record['direction'] ?? null) !== 'from_discourse'
+                    || ($record['publication_program'] ?? 'legacy') !== 'legacy'
                     || !self::native_materialization_authorized($record)) {
                     continue;
                 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.33';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.34';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error
@@ -40,6 +40,16 @@ final class WP_User
     ) {}
 }
 
+final class WP_Term
+{
+    public function __construct(
+        public int $term_id,
+        public string $name,
+        public string $taxonomy,
+        public int $parent = 0
+    ) {}
+}
+
 $GLOBALS['dbt'] = [];
 
 function dbt_reset(): void
@@ -66,6 +76,12 @@ function dbt_reset(): void
         'permalink_prefix' => '',
         'dated_permalinks' => false,
         'current_post_date' => '2026-09-16 19:17:48',
+        'terms' => [
+            new WP_Term(4, 'News', 'category'),
+            new WP_Term(8, 'Policy', 'post_tag'),
+        ],
+        'get_terms_callback' => null,
+        'object_terms' => [],
     ];
 }
 
@@ -73,6 +89,7 @@ function is_wp_error(mixed $value): bool { return $value instanceof WP_Error; }
 function get_option(string $key, mixed $default = false): mixed { return $GLOBALS['dbt']['options'][$key] ?? $default; }
 function update_option(string $key, mixed $value, bool $autoload = true): bool { $GLOBALS['dbt']['options'][$key] = $value; return true; }
 function add_option(string $key, mixed $value, string $deprecated = '', bool $autoload = true): bool { if (array_key_exists($key, $GLOBALS['dbt']['options'])) return false; $GLOBALS['dbt']['options'][$key] = $value; return true; }
+function delete_option(string $key): bool { unset($GLOBALS['dbt']['options'][$key]); return true; }
 function register_setting(...$args): void {}
 function add_settings_error(string $setting, string $code, string $message): void { $GLOBALS['dbt']['settings_errors'][] = [$setting, $code, $message]; }
 function wp_salt(string $scheme = 'auth'): string { return 'discussionbridge-test-' . $scheme . '-salt'; }
@@ -87,6 +104,7 @@ function wp_parse_url(string $url, int $component = -1): mixed { return parse_ur
 function wp_is_uuid(mixed $value): bool { return is_string($value) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value) === 1; }
 function wp_generate_uuid4(): string { return sprintf('00000000-0000-4000-8000-%012d', $GLOBALS['dbt']['uuid_counter']++); }
 function get_user_by(string $field, mixed $value): WP_User|false { foreach ($GLOBALS['dbt']['users'] as $user) { if (($field === 'login' && $user->user_login === $value) || ($field === 'id' && $user->ID === (int) $value)) return $user; } return false; }
+function get_users(array $args = []): array { unset($args); return array_values(array_filter($GLOBALS['dbt']['users'], fn(WP_User $user): bool => user_can($user, 'publish_posts'))); }
 function user_can(WP_User $user, string $capability): bool { return !empty($user->capabilities[$capability]); }
 function get_author_posts_url(int $id): string { return 'https://wordpress.example/author/' . ($GLOBALS['dbt']['users'][$id]->user_login ?? 'unknown') . '/'; }
 function home_url(string $path = ''): string { return 'https://wordpress.example' . $path; }
@@ -145,7 +163,12 @@ function is_main_query(): bool { return $GLOBALS['dbt']['main_query']; }
 function add_action(string $hook, callable|array $callback, int $priority = 10, int $args = 1): void { $GLOBALS['dbt']['actions'][] = [$hook, $callback, $priority, $args]; }
 function add_filter(string $hook, callable|array $callback, int $priority = 10, int $args = 1): void { $GLOBALS['dbt']['filters'][] = [$hook, $callback, $priority, $args]; }
 function add_shortcode(string $tag, callable|array $callback): void { $GLOBALS['dbt']['shortcodes'][$tag] = $callback; }
-function get_post_types(array $args = [], string $output = 'names'): array { unset($args, $output); return ['post' => 'post', 'page' => 'page', 'attachment' => 'attachment']; }
+function get_post_types(array $args = [], string $output = 'names'): array { unset($args, $output); return $GLOBALS['dbt']['post_types'] ?? ['post' => 'post', 'page' => 'page', 'attachment' => 'attachment']; }
+function get_post_type_object(string $name): object { return (object) ['labels' => (object) ['singular_name' => ucfirst($name)]]; }
+function get_object_taxonomies(string $post_type, string $output = 'names'): array { unset($output); return $post_type === 'post' ? ['category', 'post_tag'] : []; }
+function get_terms(array $args): array|WP_Error { $callback = $GLOBALS['dbt']['get_terms_callback']; return is_callable($callback) ? $callback($args) : array_values(array_filter($GLOBALS['dbt']['terms'], fn(WP_Term $term): bool => $term->taxonomy === ($args['taxonomy'] ?? ''))); }
+function wp_set_object_terms(int $post_id, array $term_ids, string $taxonomy, bool $append = false): array|WP_Error { unset($append); $GLOBALS['dbt']['object_terms'][$post_id][$taxonomy] = $term_ids; return $term_ids; }
+function wp_get_object_terms(int $post_id, string $taxonomy, array $args = []): array|WP_Error { unset($args); return $GLOBALS['dbt']['object_terms'][$post_id][$taxonomy] ?? []; }
 
 require_once __DIR__ . '/../src/Settings.php';
 require_once __DIR__ . '/../src/Client.php';
@@ -155,6 +178,8 @@ require_once __DIR__ . '/../src/SourceAuthors.php';
 require_once __DIR__ . '/../src/TableOfContents.php';
 require_once __DIR__ . '/../src/Publisher.php';
 require_once __DIR__ . '/../src/Materializer.php';
+require_once __DIR__ . '/../src/PlatformCatalog.php';
+require_once __DIR__ . '/../src/ForumPublisher.php';
 require_once __DIR__ . '/../src/Presentation.php';
 require_once __DIR__ . '/../src/Admin.php';
 require_once __DIR__ . '/../src/Plugin.php';

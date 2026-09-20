@@ -14,10 +14,17 @@ final class Plugin
         add_action('wp_ajax_discussionbridge_search_authors', [Admin::class, 'search_authors']);
         add_action('admin_post_discussionbridge_retry', [Admin::class, 'retry']);
         add_action('admin_post_discussionbridge_sync_publications', [Admin::class, 'sync_publications']);
+        add_action('admin_post_discussionbridge_start_forum_sync', [Admin::class, 'start_forum_sync']);
         add_action('add_meta_boxes', [Admin::class, 'register_meta_box']);
         add_action('save_post', [Admin::class, 'save_meta_box'], 10, 2);
         add_action('wp_after_insert_post', [Publisher::class, 'post_saved'], 10, 4);
         add_action(Publisher::DELIVERY_HOOK, [Publisher::class, 'deliver'], 10, 1);
+        add_action(ForumPublisher::SYNC_HOOK, [ForumPublisher::class, 'run_batch']);
+        add_action(ForumPublisher::POLL_HOOK, [ForumPublisher::class, 'poll']);
+        add_action('init', [ForumPublisher::class, 'ensure_poll_scheduled']);
+        if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
+            \WP_CLI::add_command('discussionbridge forum-sync', [ForumPublisher::class, 'cli_sync']);
+        }
         add_action('init', [Presentation::class, 'register_block']);
         add_action('wp_enqueue_scripts', [Presentation::class, 'enqueue_mapped_discussion']);
         add_filter('the_content', [Presentation::class, 'append_mapped_discussion']);
@@ -35,5 +42,7 @@ final class Plugin
         add_option(Settings::LANE_OPTION, '', '', false);
         add_option(Settings::COMMENTS_MODE_OPTION, 'interactive', '', false);
         add_option(Settings::CONNECTION_SECRET_OPTION, '', '', false);
+        add_option(ForumPublisher::STATE_OPTION, ForumPublisher::initial_state(), '', false);
+        ForumPublisher::ensure_poll_scheduled();
     }
 }
