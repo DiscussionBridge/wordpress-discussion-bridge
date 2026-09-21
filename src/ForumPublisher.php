@@ -71,24 +71,7 @@ final class ForumPublisher
             if (($previous['scope_identity'] ?? null) !== $scope_identity) {
                 $previous = self::initial_state();
             }
-            $current_catalog = $client->platform_catalog_status();
-            if (is_wp_error($current_catalog)) {
-                self::store_attention($current_catalog->get_error_code());
-                return $current_catalog;
-            }
-            $expected_catalog_revision = self::bounded_string(
-                $current_catalog['catalog_revision'] ?? null,
-                64
-            );
-            $platform_catalog = PlatformCatalog::build();
-            if (is_wp_error($platform_catalog)) {
-                self::store_attention($platform_catalog->get_error_code());
-                return $platform_catalog;
-            }
-            $catalog = $client->update_platform_catalog(
-                $platform_catalog,
-                $expected_catalog_revision !== '' ? $expected_catalog_revision : null
-            );
+            $catalog = self::refresh_platform_catalog($client);
             if (is_wp_error($catalog)) {
                 self::store_attention($catalog->get_error_code());
                 return $catalog;
@@ -172,9 +155,21 @@ final class ForumPublisher
         try {
             $state['last_incremental_poll_at'] = gmdate('c');
             $state['last_incremental_error'] = null;
+            $catalog_refreshed = false;
             for ($processed = 0; $processed < self::MAX_INCREMENTAL_WORK_PER_POLL; $processed++) {
                 self::renew_lock();
                 $claimed = $client->claim_publication_work();
+                if (is_wp_error($claimed)
+                    && $claimed->get_error_code() === 'discussionbridge_unauthorized'
+                    && !$catalog_refreshed) {
+                    $catalog_refreshed = true;
+                    $catalog = self::refresh_platform_catalog($client);
+                    if (is_wp_error($catalog)) {
+                        $state['last_incremental_error'] = $catalog->get_error_code();
+                        break;
+                    }
+                    $claimed = $client->claim_publication_work();
+                }
                 if (is_wp_error($claimed)) {
                     $state['last_incremental_error'] = $claimed->get_error_code();
                     break;
@@ -213,6 +208,27 @@ final class ForumPublisher
             self::release_lock($token);
             self::$active_lock_token = null;
         }
+    }
+
+    /** @return array<string, mixed>|WP_Error */
+    private static function refresh_platform_catalog(Client $client): array|WP_Error
+    {
+        $current_catalog = $client->platform_catalog_status();
+        if (is_wp_error($current_catalog)) {
+            return $current_catalog;
+        }
+        $expected_catalog_revision = self::bounded_string(
+            $current_catalog['catalog_revision'] ?? null,
+            64
+        );
+        $platform_catalog = PlatformCatalog::build();
+        if (is_wp_error($platform_catalog)) {
+            return $platform_catalog;
+        }
+        return $client->update_platform_catalog(
+            $platform_catalog,
+            $expected_catalog_revision !== '' ? $expected_catalog_revision : null
+        );
     }
 
     /** @param array<string, mixed> $work

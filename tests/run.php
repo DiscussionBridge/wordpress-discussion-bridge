@@ -832,6 +832,52 @@ test('automatic polling claims and acknowledges one exact incremental publicatio
     expect($state['last_incremental_error'] === null);
 });
 
+test('automatic polling refreshes a stale adapter catalog once and retries its claim', function (): void {
+    dbt_reset();
+    $state = ForumPublisher::initial_state();
+    $state['status'] = 'complete';
+    $state['initial_backfill_complete'] = true;
+    update_option(ForumPublisher::STATE_OPTION, $state, false);
+
+    $claim_url = 'https://bridge.example/discussion-bridge/v1/publication-work/claim.json';
+    $claim_count = 0;
+    $GLOBALS['dbt']['responses'][$claim_url] = static function () use (&$claim_count): array {
+        $claim_count++;
+        return $claim_count === 1
+            ? dbt_response(401, ['outcome' => 'rejected', 'reason' => 'unauthorized'])
+            : dbt_response(200, ['publication_work' => null]);
+    };
+    $catalog_url = 'https://bridge.example/discussion-bridge/v1/platform-catalog.json';
+    $catalog_gets = 0;
+    $catalog_puts = 0;
+    $GLOBALS['dbt']['responses'][$catalog_url] = static function (string $url, array $args) use (&$catalog_gets, &$catalog_puts): array {
+        unset($url);
+        if (($args['method'] ?? '') === 'GET') {
+            $catalog_gets++;
+            return dbt_response(200, [
+                'catalog_revision' => str_repeat('c', 64),
+                'destination_mapping_state' => 'current',
+            ]);
+        }
+        $catalog_puts++;
+        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.38');
+        $body = json_decode((string) $args['body'], true);
+        expect(($body['expected_catalog_revision'] ?? '') === str_repeat('c', 64));
+        expect(($body['catalog']['platform'] ?? '') === 'wordpress');
+        return dbt_response(200, [
+            'outcome' => 'accepted',
+            'catalog_revision' => str_repeat('d', 64),
+            'destination_mapping_state' => 'current',
+        ]);
+    };
+
+    ForumPublisher::poll();
+
+    expect($claim_count === 2, 'stale-catalog claim was not retried exactly once');
+    expect($catalog_gets === 1 && $catalog_puts === 1, 'catalog was not refreshed exactly once');
+    expect(ForumPublisher::state()['last_incremental_error'] === null);
+});
+
 test('automatic polling reports an incremental delivery failure with its exact lease', function (): void {
     dbt_reset();
     $state = ForumPublisher::initial_state();
