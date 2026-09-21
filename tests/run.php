@@ -1449,6 +1449,43 @@ test('forum synchronization uses a recoverable lease and ignores stale scheduled
     expect(count($GLOBALS['dbt']['requests']) === $request_count, 'a stale scheduled generation performed work');
 });
 
+test('forum synchronization reschedules a consumed batch event when its lease is busy', function (): void {
+    dbt_reset();
+    $state = ForumPublisher::initial_state();
+    $state['status'] = 'queued';
+    $state['run_id'] = 'current-run-id';
+    update_option(ForumPublisher::STATE_OPTION, $state, false);
+    update_option('discussionbridge_forum_sync_lock', [
+        'token' => 'busy', 'run_id' => 'start', 'expires_at' => time() + 300,
+    ], false);
+
+    ForumPublisher::run_batch('current-run-id');
+
+    expect(
+        wp_next_scheduled(ForumPublisher::SYNC_HOOK, ['current-run-id']) !== false,
+        'a consumed batch event was not replaced after a lease collision'
+    );
+});
+
+test('forum synchronization poll restores a missing initial batch event', function (): void {
+    dbt_reset();
+    $state = ForumPublisher::initial_state();
+    $state['status'] = 'queued';
+    $state['run_id'] = 'recoverable-run-id';
+    update_option(ForumPublisher::STATE_OPTION, $state, false);
+
+    ForumPublisher::poll();
+
+    expect(
+        wp_next_scheduled(ForumPublisher::SYNC_HOOK, ['recoverable-run-id']) !== false,
+        'the safety poll did not restore the missing initial batch event'
+    );
+    expect(
+        wp_next_scheduled(ForumPublisher::POLL_HOOK) !== false,
+        'the safety poll did not retain its own follow-up event'
+    );
+});
+
 // Test-only protected secret source. It is never an option or rendered value.
 define('DISCUSSIONBRIDGE_CONNECTION_SECRET', str_repeat('s', 43));
 

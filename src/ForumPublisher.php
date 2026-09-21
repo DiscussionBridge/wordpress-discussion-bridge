@@ -140,7 +140,14 @@ final class ForumPublisher
     {
         try {
             $state = self::state();
-            if (!Settings::ready() || in_array($state['status'], ['queued', 'running'], true)) {
+            if (!Settings::ready()) {
+                return;
+            }
+            if (in_array($state['status'], ['queued', 'running'], true)) {
+                $run_id = is_string($state['run_id'] ?? null) ? $state['run_id'] : '';
+                if (!($state['initial_backfill_complete'] ?? false) && $run_id !== '') {
+                    self::schedule($run_id);
+                }
                 return;
             }
             if (!($state['initial_backfill_complete'] ?? false)) {
@@ -284,6 +291,7 @@ final class ForumPublisher
         }
         $token = wp_generate_uuid4();
         if (!self::acquire_lock($token, $run_id)) {
+            self::schedule($run_id);
             return;
         }
         self::$active_lock_token = $token;
