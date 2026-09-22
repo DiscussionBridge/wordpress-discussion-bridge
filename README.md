@@ -53,6 +53,11 @@ Current Alpha slice:
   without duplicating the first post in the frame; and
 - builds a credential-free **On this page** navigation from two or more `h2` or
   `h3` headings in either WordPress-authored or From Discourse content.
+- enqueues a local rich-content renderer on imported native publications. It
+  renders Discourse Mermaid blocks in strict security mode, renders cooked
+  math and supported `[math]`, `$$...$$`, and inline `$...$` forms, and keeps
+  `.md-table` wrappers usable on narrow screens without a CDN or receiver
+  credential; code examples remain literal.
 
 ## Reproducible release package
 

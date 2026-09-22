@@ -4,3 +4,4 @@
 /.gitignore export-ignore
 /.github export-ignore
 /scripts export-ignore
+assets/discussionbridge-rich-content.js whitespace=-trailing-space

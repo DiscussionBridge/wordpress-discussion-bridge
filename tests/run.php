@@ -65,6 +65,11 @@ test('package, plugin, block and asset versions agree', function (): void {
     expect(!str_contains((string) $admin, "__('Lane', 'discussionbridge')"));
     expect(($block['version'] ?? null) === DISCUSSIONBRIDGE_WORDPRESS_VERSION);
     expect(($asset['version'] ?? null) === DISCUSSIONBRIDGE_WORDPRESS_VERSION);
+    $rich_content = (string) file_get_contents(__DIR__ . '/../assets/discussionbridge-rich-content.js');
+    expect(str_contains($rich_content, 'discussionbridge-mermaid'));
+    expect(str_contains($rich_content, 'discussionbridge-math'));
+    expect(str_contains($rich_content, '.md-table'));
+    expect(str_contains($rich_content, 'mathml'));
 });
 
 test('operator results translate protocol outcomes into direct language', function (): void {
@@ -860,7 +865,7 @@ test('automatic polling refreshes a stale adapter catalog once and retries its c
             ]);
         }
         $catalog_puts++;
-        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.38');
+        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.39');
         $body = json_decode((string) $args['body'], true);
         expect(($body['expected_catalog_revision'] ?? '') === str_repeat('c', 64));
         expect(($body['catalog']['platform'] ?? '') === 'wordpress');
