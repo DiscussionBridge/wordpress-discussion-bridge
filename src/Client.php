@@ -321,6 +321,13 @@ final class Client
         $status = (int) wp_remote_retrieve_response_code($response);
         $content_type = strtolower((string) wp_remote_retrieve_header($response, 'content-type'));
         $response_body = (string) wp_remote_retrieve_body($response);
+        if ($status === 429) {
+            return new WP_Error(
+                'discussionbridge_rate_limited',
+                'DiscussionBridge temporarily limited this connection.',
+                ['status' => $status]
+            );
+        }
         if (!str_starts_with($content_type, 'application/json') || strlen($response_body) > $maximum_response_bytes) {
             return new WP_Error('discussionbridge_invalid_response', 'DiscussionBridge returned an invalid response.');
         }

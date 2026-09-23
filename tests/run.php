@@ -837,6 +837,92 @@ test('automatic polling claims and acknowledges one exact incremental publicatio
     expect($state['last_incremental_error'] === null);
 });
 
+test('automatic polling processes at most eight publication claims per run', function (): void {
+    dbt_reset();
+    $state = ForumPublisher::initial_state();
+    $state['status'] = 'complete';
+    $state['initial_backfill_complete'] = true;
+    update_option(ForumPublisher::STATE_OPTION, $state, false);
+
+    $destination = [
+        'state' => 'ready',
+        'reasons' => [],
+        'catalog_revision' => str_repeat('c', 64),
+        'mapping_revision' => str_repeat('m', 64),
+        'destination_container_id' => 'post_type:post',
+        'destination_terms' => [],
+        'presentation_mode' => 'full',
+        'authorship_policy' => 'fixed',
+        'destination_author_id' => 'user:9',
+        'slug_policy' => 'topic_id',
+    ];
+    $claim_count = 0;
+    $claim_url = 'https://bridge.example/discussion-bridge/v1/publication-work/claim.json';
+    $GLOBALS['dbt']['responses'][$claim_url] = static function () use (&$claim_count): array {
+        $claim_count++;
+        return dbt_response(200, ['publication_work' => [
+            'topic_id' => 100 + $claim_count,
+            'resource_id' => null,
+            'action' => 'publish',
+            'reason' => 'new_publication',
+            'lease_token' => str_repeat((string) $claim_count, 64),
+            'attempt_count' => 1,
+        ]]);
+    };
+    for ($index = 1; $index <= 8; $index++) {
+        $topic_id = 100 + $index;
+        $revision = str_repeat(dechex($index), 64);
+        $resource_id = sprintf('99999999-9999-4999-8999-%012d', $index);
+        $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/source-topics/' . $topic_id . '.json'] =
+            dbt_response(200, ['eligible' => true, 'source_topic' => [
+                'topic_id' => $topic_id,
+                'topic_url' => 'https://bridge.example/t/topic-' . $topic_id . '/' . $topic_id,
+                'title' => 'Topic ' . $topic_id,
+                'content_html' => '<p>Bounded work item.</p>',
+                'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
+                'source_revision' => 'post:' . $topic_id . ':version:1',
+                'publication_revision' => $revision,
+                'destination' => $destination,
+                'publication' => null,
+            ]]);
+        $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/source-topics/' . $topic_id . '/resolve.json'] =
+            static function (string $url, array $args) use ($resource_id): array {
+                unset($url);
+                $body = json_decode((string) $args['body'], true);
+                return dbt_response(201, forum_resolve_result($body['publication'], $resource_id));
+            };
+        $GLOBALS['dbt']['responses'][
+            'https://bridge.example/discussion-bridge/v1/bridge-records/' . $resource_id . '/acknowledgement.json'
+        ] = static function (string $url, array $args) use ($resource_id): array {
+            unset($url);
+            $body = json_decode((string) $args['body'], true);
+            return dbt_response(200, forum_acknowledgement_result($resource_id, $body['acknowledgement']));
+        };
+    }
+
+    ForumPublisher::poll();
+
+    expect($claim_count === 8, 'incremental polling exceeded its safe eight-item receiver budget');
+    expect(ForumPublisher::state()['incremental_processed'] === 8);
+});
+
+test('automatic polling gracefully defers a plain-text receiver rate limit', function (): void {
+    dbt_reset();
+    $state = ForumPublisher::initial_state();
+    $state['status'] = 'complete';
+    $state['initial_backfill_complete'] = true;
+    update_option(ForumPublisher::STATE_OPTION, $state, false);
+    $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/publication-work/claim.json'] =
+        dbt_response(429, 'rate limited', 'text/plain');
+
+    ForumPublisher::poll();
+
+    $state = ForumPublisher::state();
+    expect($state['incremental_processed'] === 0);
+    expect($state['last_incremental_error'] === null, 'an unleased rate limit became operator attention');
+    expect(wp_next_scheduled(ForumPublisher::POLL_HOOK) !== false, 'the next bounded poll was not scheduled');
+});
+
 test('automatic polling refreshes a stale adapter catalog once and retries its claim', function (): void {
     dbt_reset();
     $state = ForumPublisher::initial_state();
@@ -865,7 +951,7 @@ test('automatic polling refreshes a stale adapter catalog once and retries its c
             ]);
         }
         $catalog_puts++;
-        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.39');
+        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.40');
         $body = json_decode((string) $args['body'], true);
         expect(($body['expected_catalog_revision'] ?? '') === str_repeat('c', 64));
         expect(($body['catalog']['platform'] ?? '') === 'wordpress');

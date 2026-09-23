@@ -16,7 +16,7 @@ final class ForumPublisher
     private const MAX_FAILURE_QUEUE = 1000;
     private const LOCK_TTL_SECONDS = 900;
     private const POLL_INTERVAL_SECONDS = 300;
-    private const MAX_INCREMENTAL_WORK_PER_POLL = 20;
+    private const MAX_INCREMENTAL_WORK_PER_POLL = 8;
     private const INTEGRITY_AUDIT_INTERVAL_SECONDS = 86400;
     private const META_PREFIX = '_discussionbridge_forum_';
     private const ADOPTION_RESOURCE_META = '_discussionbridge_forum_adoption_resource_id';
@@ -171,6 +171,9 @@ final class ForumPublisher
                     $claimed = $client->claim_publication_work();
                 }
                 if (is_wp_error($claimed)) {
+                    if ($claimed->get_error_code() === 'discussionbridge_rate_limited') {
+                        break;
+                    }
                     $state['last_incremental_error'] = $claimed->get_error_code();
                     break;
                 }
