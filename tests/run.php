@@ -951,7 +951,7 @@ test('automatic polling refreshes a stale adapter catalog once and retries its c
             ]);
         }
         $catalog_puts++;
-        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.40');
+        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.41');
         $body = json_decode((string) $args['body'], true);
         expect(($body['expected_catalog_revision'] ?? '') === str_repeat('c', 64));
         expect(($body['catalog']['platform'] ?? '') === 'wordpress');
@@ -1270,6 +1270,25 @@ test('forum synchronization unpublishes a revoked native publication without sou
     ]);
     ForumPublisher::run_batch();
     expect($ack_attempts === 2, 'an exact acknowledged revocation was sent again');
+
+    $state = ForumPublisher::initial_state();
+    $state['status'] = 'queued';
+    $state['phase'] = 'revocations';
+    update_option(ForumPublisher::STATE_OPTION, $state, false);
+    $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/source-revocations.json'] = dbt_response(200, [
+        'publication_revocations' => [[
+            'resource_id' => '55555555-5555-4555-8555-555555555555',
+            'topic_id' => 42,
+            'reason' => 'mapping_changed',
+            'publication_revision' => str_repeat('s', 64),
+            'acknowledged_publication_revision' => str_repeat('r', 64),
+            'last_delivery_outcome' => 'unpublished',
+        ]],
+        'pagination' => ['complete' => true, 'next_cursor' => null],
+    ]);
+    ForumPublisher::run_batch();
+    expect(get_post(77)?->post_status === 'draft');
+    expect($ack_attempts === 3, 'a changed revocation for an already-drafted native post was not acknowledged');
 });
 
 test('forum synchronization cancels a stale revocation retry when the topic is eligible again', function (): void {

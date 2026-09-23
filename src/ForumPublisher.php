@@ -865,7 +865,8 @@ final class ForumPublisher
             return new WP_Error('discussionbridge_revocation_post_missing');
         }
         $canonical_url = (string) get_post_meta($post->ID, self::META_PREFIX . 'canonical_url', true);
-        if ($canonical_url === '' || get_permalink($post->ID) !== $canonical_url) {
+        if ($canonical_url === ''
+            || ($post->post_status !== 'draft' && get_permalink($post->ID) !== $canonical_url)) {
             return new WP_Error('discussionbridge_native_url_unavailable');
         }
         if (($item['acknowledged_publication_revision'] ?? null) === $publication_revision
