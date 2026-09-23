@@ -1036,7 +1036,7 @@ final class ForumPublisher
     }
 
     /** @param mixed $raw_terms */
-    private static function apply_terms(int $post_id, mixed $raw_terms): true|WP_Error
+    private static function apply_terms(int $post_id, mixed $raw_terms): bool|WP_Error
     {
         $grouped = self::grouped_terms($raw_terms);
         if (is_wp_error($grouped)) {
