@@ -189,6 +189,18 @@ test('materialization uses configured local owner and visible source provenance'
     expect(Materializer::materialize(valid_record()) === 'unchanged');
 });
 
+test('forum publications accept the exact byte boundary and reject one more byte', function (): void {
+    dbt_reset();
+    $record = valid_record();
+    $record['content_html'] = str_repeat('é', ForumPublisher::MAX_FORUM_PUBLICATION_HTML_BYTES / 2);
+    expect(Materializer::materialize($record) === 'created');
+
+    dbt_reset();
+    $record = valid_record();
+    $record['content_html'] = str_repeat('x', ForumPublisher::MAX_FORUM_PUBLICATION_HTML_BYTES + 1);
+    expect_error(Materializer::materialize($record), 'discussionbridge_materialization_record');
+});
+
 test('client accepts the endpoint-specific escaped source-detail envelope and preserves receiver reasons', function (): void {
     dbt_reset();
     $detail_url = 'https://bridge.example/discussion-bridge/v1/source-topics/42.json';
@@ -489,6 +501,7 @@ test('WordPress reports stable native post types and taxonomies', function (): v
     expect($catalog['service_author_id'] === 'user:7');
     expect($catalog['presentation_modes'] === ['simple', 'full', 'fullInteractive', 'native']);
     expect($catalog['capabilities'] === ['updates' => true, 'unpublish' => true, 'drafts' => true]);
+    expect($catalog['limits']['content_bytes'] === ForumPublisher::MAX_FORUM_PUBLICATION_HTML_BYTES);
 });
 
 test('WordPress catalog fails closed instead of omitting selectable authors', function (): void {
@@ -951,7 +964,7 @@ test('automatic polling refreshes a stale adapter catalog once and retries its c
             ]);
         }
         $catalog_puts++;
-        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.41');
+        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.42');
         $body = json_decode((string) $args['body'], true);
         expect(($body['expected_catalog_revision'] ?? '') === str_repeat('c', 64));
         expect(($body['catalog']['platform'] ?? '') === 'wordpress');

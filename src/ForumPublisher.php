@@ -8,6 +8,7 @@ use WP_Error;
 
 final class ForumPublisher
 {
+    public const MAX_FORUM_PUBLICATION_HTML_BYTES = 256 * 1024;
     public const SYNC_HOOK = 'discussionbridge_forum_sync_batch';
     public const POLL_HOOK = 'discussionbridge_forum_sync_poll';
     public const STATE_OPTION = 'discussionbridge_forum_sync_state';
@@ -603,7 +604,8 @@ final class ForumPublisher
         $post_type = self::post_type($destination['destination_container_id'] ?? null);
         $title = self::bounded_string($source['title'] ?? null, 1000);
         $content = is_string($source['content_html'] ?? null) ? (string) $source['content_html'] : '';
-        if ($post_type === '' || $title === '' || $content === '' || strlen($content) > 49152) {
+        if ($post_type === '' || $title === '' || $content === ''
+            || strlen($content) > self::MAX_FORUM_PUBLICATION_HTML_BYTES) {
             return new WP_Error('discussionbridge_invalid_source_content');
         }
         $content = wp_kses_post($content);

@@ -142,7 +142,7 @@ final class PlatformCatalog
                 'drafts' => true,
             ],
             'limits' => [
-                'content_bytes' => 49152,
+                'content_bytes' => ForumPublisher::MAX_FORUM_PUBLICATION_HTML_BYTES,
                 'title_bytes' => 1000,
                 'slug_bytes' => 200,
             ],
