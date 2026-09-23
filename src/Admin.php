@@ -100,6 +100,17 @@ final class Admin
         exit;
     }
 
+    public static function start_forum_sync(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to synchronize forum publications.', 'discussionbridge'));
+        }
+        check_admin_referer('discussionbridge_start_forum_sync');
+        ForumPublisher::start();
+        wp_safe_redirect(admin_url('options-general.php?page=discussionbridge'));
+        exit;
+    }
+
     public static function register_meta_box(): void
     {
         foreach (Settings::post_types() as $post_type) {
@@ -237,8 +248,11 @@ final class Admin
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="discussionbridge_lane"><?php echo esc_html__('Lane', 'discussionbridge'); ?></label></th>
-                        <td><input class="regular-text" type="text" id="discussionbridge_lane" name="<?php echo esc_attr(Settings::LANE_OPTION); ?>" value="<?php echo esc_attr(Settings::lane()); ?>"></td>
+                        <th scope="row"><label for="discussionbridge_lane"><?php echo esc_html__('Advanced category route', 'discussionbridge'); ?></label></th>
+                        <td>
+                            <input class="regular-text" type="text" id="discussionbridge_lane" name="<?php echo esc_attr(Settings::LANE_OPTION); ?>" value="<?php echo esc_attr(Settings::lane()); ?>">
+                            <p class="description"><?php echo esc_html__('Optional. Use only when the Discourse connection has a matching advanced route; otherwise leave blank.', 'discussionbridge'); ?></p>
+                        </td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="discussionbridge_service_author"><?php echo esc_html__('From Discourse service author', 'discussionbridge'); ?></label></th>
@@ -254,6 +268,52 @@ final class Admin
                     </tr>
                 </table>
                 <?php submit_button(); ?>
+            </form>
+
+            <?php $forum_state = ForumPublisher::state(); ?>
+            <h2><?php echo esc_html__('Publish the connected forum into WordPress', 'discussionbridge'); ?></h2>
+            <p><?php echo esc_html__('WordPress reports its public post types and taxonomies to this connection, then processes the forum operator’s category, tag, destination, and presentation rules as a resumable background synchronization.', 'discussionbridge'); ?></p>
+            <p><strong><?php echo esc_html__('Status:', 'discussionbridge'); ?></strong>
+                <code><?php echo esc_html((string) $forum_state['status']); ?></code>
+                <?php echo esc_html(sprintf(
+                    __('%1$d processed · %2$d created · %3$d updated · %4$d unchanged · %5$d held · %6$d failed', 'discussionbridge'),
+                    (int) $forum_state['processed'],
+                    (int) $forum_state['created'],
+                    (int) $forum_state['updated'],
+                    (int) $forum_state['unchanged'],
+                    (int) $forum_state['held'],
+                    (int) $forum_state['failed']
+                )); ?>
+            </p>
+            <p><?php echo esc_html(sprintf(
+                __('%1$d retry events · %2$d unpublished · %3$d queued topic attention items · %4$d queued revocation attention items', 'discussionbridge'),
+                (int) $forum_state['retry_events'],
+                (int) $forum_state['unpublished'],
+                count($forum_state['topic_failures']),
+                count($forum_state['revocation_failures'])
+            )); ?></p>
+            <?php if ($forum_state['failure_codes'] !== []) : ?>
+                <p><?php echo esc_html__('Attention codes:', 'discussionbridge'); ?>
+                    <?php foreach ($forum_state['failure_codes'] as $code) : ?><code><?php echo esc_html((string) $code); ?></code> <?php endforeach; ?>
+                </p>
+            <?php endif; ?>
+            <?php if ($forum_state['topic_failures'] !== [] || $forum_state['revocation_failures'] !== []) : ?>
+                <ul>
+                    <?php foreach (array_slice($forum_state['topic_failures'], 0, 10) as $failure) : ?>
+                        <li><?php echo esc_html(sprintf(__('Topic %1$d: %2$s', 'discussionbridge'), (int) ($failure['topic_id'] ?? 0), (string) ($failure['code'] ?? 'attention'))); ?></li>
+                    <?php endforeach; ?>
+                    <?php foreach (array_slice($forum_state['revocation_failures'], 0, 10) as $failure) : ?>
+                        <li><?php echo esc_html(sprintf(__('Revocation %1$s: %2$s', 'discussionbridge'), (string) ($failure['resource_id'] ?? ''), (string) ($failure['code'] ?? 'attention'))); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <?php if ($forum_state['status'] === 'awaiting_mapping') : ?>
+                <div class="notice notice-warning inline"><p><?php echo esc_html__('WordPress reported its current platform structure. Complete the destination mapping and publication preview in the Discourse connection, then start synchronization again.', 'discussionbridge'); ?></p></div>
+            <?php endif; ?>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="discussionbridge_start_forum_sync">
+                <?php wp_nonce_field('discussionbridge_start_forum_sync'); ?>
+                <?php submit_button(__('Refresh platform setup and start or restart forum synchronization', 'discussionbridge'), 'primary', 'submit', false); ?>
             </form>
 
             <h2><?php echo esc_html__('Published-content delivery', 'discussionbridge'); ?></h2>

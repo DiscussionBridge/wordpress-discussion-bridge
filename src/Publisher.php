@@ -114,6 +114,14 @@ final class Publisher
             return;
         }
 
+        $previous_resource_id = (string) get_post_meta($post_id, self::META_PREFIX . 'resource_id', true);
+        $previous_topic_id = (int) get_post_meta($post_id, self::META_PREFIX . 'topic_id', true);
+        if (($previous_resource_id !== '' || $previous_topic_id > 0)
+            && ($previous_resource_id !== $resource_id || $previous_topic_id !== $topic_id)) {
+            self::record_failure($post_id, 'returned_identity_mismatch', false);
+            return;
+        }
+
         update_post_meta($post_id, self::META_PREFIX . 'status', 'healthy');
         update_post_meta($post_id, self::META_PREFIX . 'last_outcome', $outcome);
         update_post_meta($post_id, self::META_PREFIX . 'last_reason', (string) ($result['reason'] ?? ''));

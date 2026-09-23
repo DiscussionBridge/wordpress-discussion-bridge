@@ -60,6 +60,7 @@ final class Materializer
                 }
                 $seen_resources[$resource_id] = true;
                 if (!is_array($record) || ($record['direction'] ?? null) !== 'from_discourse'
+                    || ($record['publication_program'] ?? 'legacy') !== 'legacy'
                     || !self::native_materialization_authorized($record)) {
                     continue;
                 }
@@ -223,7 +224,8 @@ final class Materializer
         $bindings = $record['bindings'] ?? null;
         if (($record['state'] ?? null) !== 'healthy' || !is_string($resource_id) || !wp_is_uuid($resource_id)
             || !is_string($title) || trim($title) === '' || strlen($title) > 1024
-            || !is_string($content) || trim($content) === '' || strlen($content) > 65536
+            || !is_string($content) || trim($content) === ''
+            || strlen($content) > ForumPublisher::MAX_FORUM_PUBLICATION_HTML_BYTES
             || !is_int($record['topic_id'] ?? null) || $record['topic_id'] <= 0
             || !is_string($record['topic_url'] ?? null) || !Settings::topic_url_matches($record['topic_url'], $record['topic_id'])
             || !is_array($source) || !is_array($bindings)) {

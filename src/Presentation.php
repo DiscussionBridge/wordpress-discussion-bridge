@@ -15,7 +15,8 @@ final class Presentation
     public static function native_comments_open(bool $open, int $post_id): bool
     {
         if ($post_id > 0 && (get_post_meta($post_id, Publisher::ENABLED_META, true) === '1'
-            || get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1')) {
+            || get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1'
+            || in_array(get_post_meta($post_id, '_discussionbridge_forum_status', true), ['healthy', 'pending'], true))) {
             return false;
         }
         return $open;
@@ -66,6 +67,19 @@ final class Presentation
                     true
                 );
             }
+            if ($post_id > 0 && in_array(
+                get_post_meta($post_id, '_discussionbridge_forum_status', true),
+                ['healthy', 'pending'],
+                true
+            )) {
+                wp_enqueue_script(
+                    'discussionbridge-rich-content',
+                    plugins_url('assets/discussionbridge-rich-content.js', DISCUSSIONBRIDGE_WORDPRESS_FILE),
+                    [],
+                    DISCUSSIONBRIDGE_WORDPRESS_VERSION,
+                    true
+                );
+            }
         }
         $mapping = self::current_to_discourse_mapping();
         if ($mapping === null) {
@@ -87,16 +101,17 @@ final class Presentation
             return $content;
         }
         $mode = self::current_comments_mode();
+        $provenance = self::current_forum_provenance();
         if ($mode === 'none') {
-            return $content;
+            return $provenance === '' ? $content : TableOfContents::render($content) . $provenance;
         }
 
         if ($mode === 'simple') {
             $simple = self::render_simple($mapping['topic_id'], $mapping['topic_url']);
-            return $simple === '' ? $content : TableOfContents::render($content) . $simple;
+            return $simple === '' ? $content : TableOfContents::render($content) . $provenance . $simple;
         }
 
-        return TableOfContents::render($content) . sprintf(
+        return TableOfContents::render($content) . $provenance . sprintf(
             '<section class="discussionbridge-discussion discussionbridge-discussion--%s" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>%s</section>',
             esc_attr($mode),
             esc_attr($mapping['resource_id']),
@@ -114,14 +129,26 @@ final class Presentation
             return null;
         }
         $post_id = get_queried_object_id();
-        if ($post_id <= 0
-            || get_post_meta($post_id, self::META_PREFIX . 'status', true) !== 'healthy') {
+        if ($post_id <= 0) {
+            return null;
+        }
+        $prefix = null;
+        if (get_post_meta($post_id, self::META_PREFIX . 'status', true) === 'healthy') {
+            $prefix = self::META_PREFIX;
+        } elseif (in_array(
+            get_post_meta($post_id, '_discussionbridge_forum_status', true),
+            ['healthy', 'pending'],
+            true
+        )) {
+            $prefix = '_discussionbridge_forum_';
+        }
+        if ($prefix === null) {
             return null;
         }
 
-        $resource_id = (string) get_post_meta($post_id, self::META_PREFIX . 'resource_id', true);
-        $topic_id = (int) get_post_meta($post_id, self::META_PREFIX . 'topic_id', true);
-        $topic_url = (string) get_post_meta($post_id, self::META_PREFIX . 'topic_url', true);
+        $resource_id = (string) get_post_meta($post_id, $prefix . 'resource_id', true);
+        $topic_id = (int) get_post_meta($post_id, $prefix . 'topic_id', true);
+        $topic_url = (string) get_post_meta($post_id, $prefix . 'topic_url', true);
         if (!wp_is_uuid($resource_id) || !Settings::topic_url_matches($topic_url, $topic_id)) {
             return null;
         }
@@ -131,6 +158,32 @@ final class Presentation
             'topic_id' => $topic_id,
             'topic_url' => $topic_url,
         ];
+    }
+
+    private static function current_forum_provenance(): string
+    {
+        $post_id = (int) get_queried_object_id();
+        if ($post_id <= 0 || !in_array(
+            get_post_meta($post_id, '_discussionbridge_forum_status', true),
+            ['healthy', 'pending'],
+            true
+        )) {
+            return '';
+        }
+        $raw = json_decode((string) get_post_meta($post_id, '_discussionbridge_forum_source_author', true), true);
+        $profile_url = (string) get_post_meta($post_id, '_discussionbridge_forum_source_profile_url', true);
+        $revision = (string) get_post_meta($post_id, '_discussionbridge_forum_source_revision', true);
+        if (!is_array($raw) || !is_string($raw['name'] ?? null) || $raw['name'] === ''
+            || $profile_url === '' || $revision === '') {
+            return '';
+        }
+        return sprintf(
+            '<aside class="discussionbridge-provenance"><strong>%s</strong> <a href="%s">%s</a><span>%s</span></aside>',
+            esc_html__('Originally published in Discourse by', 'discussionbridge'),
+            esc_url($profile_url),
+            esc_html($raw['name']),
+            esc_html(sprintf(__('Source revision %s', 'discussionbridge'), $revision))
+        );
     }
 
     private static function render(string $requested_resource_id, string $comments_mode): string
