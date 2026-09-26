@@ -628,6 +628,8 @@ test('forum synchronization materializes and acknowledges an exact native WordPr
         'title' => 'Forum policy guide',
         'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
         'source_revision' => 'post:99:version:3',
+        'source_created_at' => '2026-09-19T15:00:00.000000Z',
+        'source_updated_at' => '2026-09-20T16:00:00.123456789Z',
         'publication_revision' => str_repeat('p', 64),
         'destination' => $destination,
         'publication' => null,
@@ -679,6 +681,9 @@ test('forum synchronization materializes and acknowledges an exact native WordPr
     expect($post->post_author === 9 && $post->post_name === 'discourse-topic-42');
     expect($post->post_content === '<h2>Policy</h2><p>Forum-owned content.</p>');
     expect(get_post_meta(100, '_discussionbridge_forum_resource_id', true) === '44444444-4444-4444-8444-444444444444');
+    expect(get_post_meta(100, '_discussionbridge_forum_source_created_at', true) === '2026-09-19T15:00:00.000000Z');
+    expect(get_post_meta(100, '_discussionbridge_forum_source_updated_at', true) === '2026-09-20T16:00:00.123456789Z');
+    expect(get_post_meta(100, '_discussionbridge_forum_source_updated_sort', true) === '2026-09-20T16:00:00.123456789Z');
     expect($GLOBALS['dbt']['object_terms'][100]['category'] === [4]);
     expect(json_decode((string) get_post_meta(100, '_discussionbridge_forum_source_author', true), true) === [
         'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil', 'username' => 'phil',
@@ -819,6 +824,8 @@ test('automatic polling claims and acknowledges one exact incremental publicatio
             'profile_url' => 'https://bridge.example/u/phil',
         ],
         'source_revision' => 'post:99:version:4',
+        'source_created_at' => '2026-09-19T15:00:00.000000Z',
+        'source_updated_at' => '2026-09-21T16:00:00.000000Z',
         'publication_revision' => str_repeat('q', 64),
         'destination' => $destination,
         'publication' => null,
@@ -894,6 +901,8 @@ test('automatic polling processes at most eight publication claims per run', fun
                 'content_html' => '<p>Bounded work item.</p>',
                 'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
                 'source_revision' => 'post:' . $topic_id . ':version:1',
+                'source_created_at' => '2026-09-19T15:00:00.000000Z',
+                'source_updated_at' => '2026-09-20T16:00:00.000000Z',
                 'publication_revision' => $revision,
                 'destination' => $destination,
                 'publication' => null,
@@ -964,7 +973,7 @@ test('automatic polling refreshes a stale adapter catalog once and retries its c
             ]);
         }
         $catalog_puts++;
-        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.42');
+        expect(($args['headers']['X-DiscussionBridge-Adapter-Version'] ?? '') === '0.2.0-alpha.43');
         $body = json_decode((string) $args['body'], true);
         expect(($body['expected_catalog_revision'] ?? '') === str_repeat('c', 64));
         expect(($body['catalog']['platform'] ?? '') === 'wordpress');
@@ -1045,7 +1054,10 @@ test('forum synchronization adopts the exact legacy materialized post instead of
         'topic_id' => 81, 'topic_url' => 'https://bridge.example/t/adopt-legacy/81',
         'title' => 'Adopt legacy',
         'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
-        'source_revision' => 'post:181:version:1', 'publication_revision' => str_repeat('p', 64),
+        'source_revision' => 'post:181:version:1',
+        'source_created_at' => '2026-09-19T15:00:00.000000Z',
+        'source_updated_at' => '2026-09-20T16:00:00.000000Z',
+        'publication_revision' => str_repeat('p', 64),
         'destination' => $destination, 'publication' => $publication,
     ];
     $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/source-topics.json'] = dbt_response(200, [
@@ -1131,7 +1143,10 @@ test('forum synchronization drafts and acknowledges an established publication t
     $item = [
         'topic_id' => 82, 'topic_url' => 'https://bridge.example/t/unmapped/82', 'title' => 'Unmapped',
         'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
-        'source_revision' => 'post:182:version:2', 'publication_revision' => str_repeat('u', 64),
+        'source_revision' => 'post:182:version:2',
+        'source_created_at' => '2026-09-19T15:00:00.000000Z',
+        'source_updated_at' => '2026-09-20T16:00:00.000000Z',
+        'publication_revision' => str_repeat('u', 64),
         'destination' => $destination,
         'publication' => [
             'resource_id' => $resource_id, 'external_id' => 'wordpress:post:78',
@@ -1188,7 +1203,10 @@ test('forum synchronization leaves an unmappable legacy publication under the le
             'topic_id' => 86, 'topic_url' => 'https://bridge.example/t/legacy-owned/86',
             'title' => 'Legacy owned',
             'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
-            'source_revision' => 'post:186:version:1', 'publication_revision' => str_repeat('l', 64),
+            'source_revision' => 'post:186:version:1',
+            'source_created_at' => '2026-09-19T15:00:00.000000Z',
+            'source_updated_at' => '2026-09-20T16:00:00.000000Z',
+            'publication_revision' => str_repeat('l', 64),
             'destination' => [
                 'state' => 'attention', 'reasons' => ['category_unmapped'],
                 'catalog_revision' => str_repeat('c', 64), 'mapping_revision' => str_repeat('m', 64),
@@ -1395,6 +1413,8 @@ test('forum synchronization reuses its pending draft after a resolve retry', fun
         'title' => 'Retry safely',
         'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
         'source_revision' => 'post:109:version:1',
+        'source_created_at' => '2026-09-19T15:00:00.000000Z',
+        'source_updated_at' => '2026-09-20T16:00:00.000000Z',
         'publication_revision' => str_repeat('p', 64),
         'destination' => $destination,
         'publication' => null,
@@ -1478,6 +1498,8 @@ test('forum synchronization holds a published post when URL-shaping mapping chan
         'title' => 'Changed destination',
         'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
         'source_revision' => 'post:121:version:2',
+        'source_created_at' => '2026-09-19T15:00:00.000000Z',
+        'source_updated_at' => '2026-09-20T16:00:00.000000Z',
         'publication_revision' => str_repeat('q', 64),
         'destination' => $destination,
         'publication' => null,
@@ -1527,6 +1549,8 @@ test('forum synchronization never leaves a new post public after acknowledgement
         'title' => 'Acknowledgement failure',
         'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
         'source_revision' => 'post:144:version:1',
+        'source_created_at' => '2026-09-19T15:00:00.000000Z',
+        'source_updated_at' => '2026-09-20T16:00:00.000000Z',
         'publication_revision' => str_repeat('z', 64),
         'destination' => $destination,
         'publication' => null,
@@ -1576,7 +1600,10 @@ test('forum synchronization rejects publication identity drift between feed and 
     $item = [
         'topic_id' => 85, 'topic_url' => 'https://bridge.example/t/drift/85', 'title' => 'Drift',
         'author' => ['username' => 'phil', 'name' => 'Phil', 'profile_url' => 'https://bridge.example/u/phil'],
-        'source_revision' => 'post:185:version:1', 'publication_revision' => str_repeat('d', 64),
+        'source_revision' => 'post:185:version:1',
+        'source_created_at' => '2026-09-19T15:00:00.000000Z',
+        'source_updated_at' => '2026-09-20T16:00:00.000000Z',
+        'publication_revision' => str_repeat('d', 64),
         'destination' => $destination, 'publication' => null,
     ];
     $GLOBALS['dbt']['responses']['https://bridge.example/discussion-bridge/v1/source-topics.json'] = dbt_response(200, [

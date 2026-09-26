@@ -556,9 +556,11 @@ final class ForumPublisher
         $topic_id = (int) ($item['topic_id'] ?? 0);
         $source_revision = self::bounded_string($item['source_revision'] ?? null, 255);
         $publication_revision = self::bounded_string($item['publication_revision'] ?? null, 64);
+        $source_times = self::source_times($item);
         $destination = $item['destination'] ?? null;
         $publication = is_array($item['publication'] ?? null) ? $item['publication'] : [];
-        if ($topic_id <= 0 || $source_revision === '' || $publication_revision === '' || !is_array($destination)) {
+        if ($topic_id <= 0 || $source_revision === '' || $publication_revision === ''
+            || $source_times === null || !is_array($destination)) {
             return new WP_Error('discussionbridge_invalid_source_topic');
         }
         if (($destination['state'] ?? null) !== 'ready') {
@@ -576,7 +578,8 @@ final class ForumPublisher
             $source_revision,
             $publication_revision,
             $destination,
-            $publication
+            $publication,
+            $source_times
         ) : null;
         if ($skipped_post_id !== null) {
             return ['outcome' => 'unchanged', 'post_id' => $skipped_post_id];
@@ -592,6 +595,8 @@ final class ForumPublisher
         }
         if (($source['source_revision'] ?? null) !== $source_revision
             || ($source['publication_revision'] ?? null) !== $publication_revision
+            || ($source['source_created_at'] ?? null) !== $source_times['created_at']
+            || ($source['source_updated_at'] ?? null) !== $source_times['updated_at']
             || !self::same_value($source['destination'] ?? null, $destination)
             || !self::same_value(
                 is_array($source['publication'] ?? null) ? $source['publication'] : [],
@@ -667,7 +672,8 @@ final class ForumPublisher
             $author_id,
             $topic_url,
             $source_author,
-            $comments_mode
+            $comments_mode,
+            $source_times
         )) {
             update_post_meta($post_id, self::META_PREFIX . 'integrity_audited_at', (string) time());
             return ['outcome' => 'unchanged', 'post_id' => $post_id];
@@ -785,7 +791,8 @@ final class ForumPublisher
             $canonical_url,
             $topic_url,
             $source_author,
-            $comments_mode
+            $comments_mode,
+            $source_times
         );
         if (!self::pending_state_matches(
             $post_id,
@@ -798,7 +805,8 @@ final class ForumPublisher
             $canonical_url,
             $topic_url,
             $source_author,
-            $comments_mode
+            $comments_mode,
+            $source_times
         )) {
             if (!self::restore_after_failure($post_id, $creating, $snapshot)) {
                 return new WP_Error('discussionbridge_native_rollback_failed');
@@ -1092,7 +1100,8 @@ final class ForumPublisher
         string $canonical_url,
         string $topic_url,
         array $source_author,
-        string $comments_mode
+        string $comments_mode,
+        array $source_times
     ): void {
         update_post_meta($post_id, self::META_PREFIX . 'connection_id', Settings::connection_id());
         update_post_meta($post_id, self::META_PREFIX . 'topic_id', (string) $topic_id);
@@ -1105,6 +1114,9 @@ final class ForumPublisher
         update_post_meta($post_id, self::META_PREFIX . 'topic_url', $topic_url);
         update_post_meta($post_id, self::META_PREFIX . 'source_author', self::stable_json($source_author));
         update_post_meta($post_id, self::META_PREFIX . 'source_profile_url', $source_author['profile_url']);
+        update_post_meta($post_id, self::META_PREFIX . 'source_created_at', $source_times['created_at']);
+        update_post_meta($post_id, self::META_PREFIX . 'source_updated_at', $source_times['updated_at']);
+        update_post_meta($post_id, self::META_PREFIX . 'source_updated_sort', $source_times['updated_sort']);
         update_post_meta($post_id, Presentation::COMMENTS_MODE_META, $comments_mode);
         update_post_meta($post_id, self::META_PREFIX . 'status', 'pending');
     }
@@ -1170,6 +1182,59 @@ final class ForumPublisher
         return is_string($value) && strlen($value) <= 2048 ? $value : '';
     }
 
+    /** @param array<string, mixed> $source
+     *  @return array{created_at:string,updated_at:string,updated_sort:string}|null
+     */
+    private static function source_times(array $source): ?array
+    {
+        $created = self::source_time($source['source_created_at'] ?? null);
+        $updated = self::source_time($source['source_updated_at'] ?? null);
+        if ($created === null || $updated === null || strcmp($updated['sort'], $created['sort']) < 0) {
+            return null;
+        }
+        return [
+            'created_at' => $created['exact'],
+            'updated_at' => $updated['exact'],
+            'updated_sort' => $updated['sort'],
+        ];
+    }
+
+    /** @return array{exact:string,sort:string}|null */
+    private static function source_time(mixed $value): ?array
+    {
+        if (!is_string($value) || strlen($value) > 64
+            || preg_match(
+                '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?Z$/',
+                $value,
+                $match
+            ) !== 1) {
+            return null;
+        }
+        $year = (int) $match[1];
+        $month = (int) $match[2];
+        $day = (int) $match[3];
+        $hour = (int) $match[4];
+        $minute = (int) $match[5];
+        $second = (int) $match[6];
+        if (!checkdate($month, $day, $year) || $hour > 23 || $minute > 59 || $second > 59) {
+            return null;
+        }
+        $fraction = str_pad((string) ($match[7] ?? ''), 9, '0');
+        return [
+            'exact' => $value,
+            'sort' => sprintf(
+                '%04d-%02d-%02dT%02d:%02d:%02d.%sZ',
+                $year,
+                $month,
+                $day,
+                $hour,
+                $minute,
+                $second,
+                $fraction
+            ),
+        ];
+    }
+
     private static function native_canonical_url(int $post_id): string
     {
         $post = get_post($post_id);
@@ -1222,7 +1287,8 @@ final class ForumPublisher
         int $author_id,
         string $topic_url,
         array $source_author,
-        string $comments_mode
+        string $comments_mode,
+        array $source_times
     ): bool {
         $external_id = 'wordpress:post:' . $post->ID;
         $canonical_url = (string) ($publication['canonical_url'] ?? '');
@@ -1245,6 +1311,9 @@ final class ForumPublisher
             && get_post_meta($post->ID, self::META_PREFIX . 'topic_url', true) === $topic_url
             && get_post_meta($post->ID, self::META_PREFIX . 'source_author', true) === self::stable_json($source_author)
             && get_post_meta($post->ID, self::META_PREFIX . 'source_profile_url', true) === $source_author['profile_url']
+            && get_post_meta($post->ID, self::META_PREFIX . 'source_created_at', true) === $source_times['created_at']
+            && get_post_meta($post->ID, self::META_PREFIX . 'source_updated_at', true) === $source_times['updated_at']
+            && get_post_meta($post->ID, self::META_PREFIX . 'source_updated_sort', true) === $source_times['updated_sort']
             && get_post_meta($post->ID, Presentation::COMMENTS_MODE_META, true) === $comments_mode
             && get_post_meta($post->ID, self::META_PREFIX . 'status', true) === 'healthy'
             && self::native_terms_match($post->ID, $destination['destination_terms'] ?? []);
@@ -1256,7 +1325,8 @@ final class ForumPublisher
         string $source_revision,
         string $publication_revision,
         array $destination,
-        array $publication
+        array $publication,
+        array $source_times
     ): ?int {
         if (($publication['publication_program'] ?? null) !== 'forum_sync'
             || ($publication['destination_state'] ?? null) !== 'healthy'
@@ -1279,6 +1349,10 @@ final class ForumPublisher
             && get_post_meta($post->ID, self::META_PREFIX . 'destination', true) === self::stable_json($destination)
             && get_post_meta($post->ID, self::META_PREFIX . 'resource_id', true) === ($publication['resource_id'] ?? null)
             && get_post_meta($post->ID, self::META_PREFIX . 'canonical_url', true) === ($publication['canonical_url'] ?? null);
+        $matches = $matches
+            && get_post_meta($post->ID, self::META_PREFIX . 'source_created_at', true) === $source_times['created_at']
+            && get_post_meta($post->ID, self::META_PREFIX . 'source_updated_at', true) === $source_times['updated_at']
+            && get_post_meta($post->ID, self::META_PREFIX . 'source_updated_sort', true) === $source_times['updated_sort'];
         return $matches ? $post->ID : null;
     }
 
@@ -1294,7 +1368,8 @@ final class ForumPublisher
         string $canonical_url,
         string $topic_url,
         array $source_author,
-        string $comments_mode
+        string $comments_mode,
+        array $source_times
     ): bool {
         return get_post_meta($post_id, self::META_PREFIX . 'connection_id', true) === Settings::connection_id()
             && get_post_meta($post_id, self::META_PREFIX . 'topic_id', true) === (string) $topic_id
@@ -1307,6 +1382,9 @@ final class ForumPublisher
             && get_post_meta($post_id, self::META_PREFIX . 'topic_url', true) === $topic_url
             && get_post_meta($post_id, self::META_PREFIX . 'source_author', true) === self::stable_json($source_author)
             && get_post_meta($post_id, self::META_PREFIX . 'source_profile_url', true) === $source_author['profile_url']
+            && get_post_meta($post_id, self::META_PREFIX . 'source_created_at', true) === $source_times['created_at']
+            && get_post_meta($post_id, self::META_PREFIX . 'source_updated_at', true) === $source_times['updated_at']
+            && get_post_meta($post_id, self::META_PREFIX . 'source_updated_sort', true) === $source_times['updated_sort']
             && get_post_meta($post_id, Presentation::COMMENTS_MODE_META, true) === $comments_mode
             && get_post_meta($post_id, self::META_PREFIX . 'status', true) === 'pending';
     }
@@ -1337,7 +1415,8 @@ final class ForumPublisher
         $meta_keys = [
             'connection_id', 'topic_id', 'resource_id', 'source_revision', 'publication_revision',
             'mapping_revision', 'destination', 'canonical_url', 'topic_url', 'source_author',
-            'source_profile_url', 'integrity_audited_at', 'status',
+            'source_profile_url', 'source_created_at', 'source_updated_at', 'source_updated_sort',
+            'integrity_audited_at', 'status',
         ];
         $meta = [];
         foreach ($meta_keys as $key) {
