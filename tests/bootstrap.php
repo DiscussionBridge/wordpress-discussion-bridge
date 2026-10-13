@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 const ABSPATH = '/srv/www/wordpress/';
 const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.28';
+const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.3.0-alpha.1';
 const MINUTE_IN_SECONDS = 60;
 
 final class WP_Error
@@ -24,7 +24,9 @@ final class WP_Post
         public string $post_title = '',
         public string $post_content = '',
         public int $post_author = 0,
-        public string $post_name = ''
+        public string $post_name = '',
+        public string $post_date_gmt = '',
+        public string $post_modified_gmt = ''
     ) {}
 }
 
@@ -38,10 +40,70 @@ final class WP_User
     ) {}
 }
 
+final class WP_Query
+{
+    public function __construct(private array $args = []) {}
+    public function get(string $key): mixed { return $this->args[$key] ?? null; }
+}
+
+/** Author fixture for WordPress's prepared postmeta census; optional real SQLite execution. */
+final class DBT_WPDB
+{
+    public string $postmeta = 'wp_postmeta';
+    public string $posts = 'wp_posts';
+    public string $last_error = '';
+
+    public function prepare(string $query, string ...$arguments): string
+    {
+        $position = 0;
+        return preg_replace_callback('/%s/', static function () use (&$position, $arguments): string {
+            return "'" . str_replace("'", "''", $arguments[$position++]) . "'";
+        }, $query);
+    }
+
+    public function get_col(string $query): mixed
+    {
+        $this->last_error = '';
+        $GLOBALS['dbt']['census_queries'][] = $query;
+        $override = $GLOBALS['dbt']['census_override'];
+        if (is_callable($override)) return $override($this, $query);
+        if (class_exists('SQLite3')) {
+            $database = new SQLite3(':memory:');
+            try {
+                $database->enableExceptions(true);
+                $database->exec("CREATE TABLE {$this->postmeta} (post_id INTEGER, meta_key TEXT COLLATE NOCASE, meta_value TEXT COLLATE NOCASE)");
+                $insert = $database->prepare("INSERT INTO {$this->postmeta} VALUES (:id, :key, :value)");
+                foreach ($GLOBALS['dbt']['meta'] as $id => $metadata) foreach ($metadata as $key => $value) {
+                    $insert->bindValue(':id', $id, SQLITE3_INTEGER); $insert->bindValue(':key', $key, SQLITE3_TEXT);
+                    $insert->bindValue(':value', is_scalar($value) ? (string) $value : json_encode($value), SQLITE3_TEXT);
+                    $result = $insert->execute(); $result->finalize(); $insert->reset();
+                }
+                foreach ($GLOBALS['dbt']['extra_postmeta_rows'] as [$id, $key, $value]) {
+                    $insert->bindValue(':id', $id, SQLITE3_INTEGER); $insert->bindValue(':key', $key, SQLITE3_TEXT);
+                    $insert->bindValue(':value', $value, SQLITE3_TEXT);
+                    $result = $insert->execute(); $result->finalize(); $insert->reset();
+                }
+                $rows = $database->query($query); $claims = [];
+                while ($row = $rows->fetchArray(SQLITE3_NUM)) $claims[] = (string) $row[0];
+                $rows->finalize();
+                return $claims;
+            } finally { $database->close(); }
+        }
+        if (!preg_match("/WHERE meta_key = '([^']+)' AND meta_value = '([^']+)' ORDER BY post_id ASC LIMIT 2\\z/", $query, $matches)) {
+            throw new RuntimeException('unexpected author census query');
+        }
+        $ids = [];
+        foreach ($GLOBALS['dbt']['meta'] as $id => $metadata) if (($metadata[$matches[1]] ?? null) === $matches[2]) $ids[] = (int) $id;
+        sort($ids, SORT_NUMERIC);
+        return array_map('strval', array_slice($ids, 0, 2));
+    }
+}
+
 $GLOBALS['dbt'] = [];
 
 function dbt_reset(): void
 {
+    $GLOBALS['wpdb'] = new DBT_WPDB();
     $GLOBALS['dbt'] = [
         'options' => [
             'discussionbridge_server_url' => 'https://bridge.example',
@@ -49,7 +111,7 @@ function dbt_reset(): void
             'discussionbridge_site_id' => '11111111-1111-4111-8111-111111111111',
             'discussionbridge_lane' => 'wordpress',
             'discussionbridge_post_types' => ['post'],
-            'discussionbridge_comments_mode' => 'fullInteractive',
+            'discussionbridge_comments_mode' => 'interactive',
             'discussionbridge_service_author' => 'bridge-service',
         ],
         'users' => [
@@ -61,7 +123,8 @@ function dbt_reset(): void
         'settings_errors' => [], 'inserted' => [], 'deleted' => [], 'next_post_id' => 100,
         'queried_id' => 0, 'is_admin' => false, 'is_singular' => true, 'in_loop' => true,
         'main_query' => true, 'uuid_counter' => 1, 'wp_update_callback' => null,
-        'permalink_prefix' => '',
+        'permalink_prefix' => '', 'meta_write_callback' => null, 'wp_insert_callback' => null,
+        'census_queries' => [], 'census_override' => null, 'extra_postmeta_rows' => [],
     ];
 }
 
@@ -72,7 +135,8 @@ function add_option(string $key, mixed $value, string $deprecated = '', bool $au
 function register_setting(...$args): void {}
 function add_settings_error(string $setting, string $code, string $message): void { $GLOBALS['dbt']['settings_errors'][] = [$setting, $code, $message]; }
 function wp_salt(string $scheme = 'auth'): string { return 'discussionbridge-test-' . $scheme . '-salt'; }
-function wp_unslash(mixed $value): mixed { return $value; }
+function wp_unslash(mixed $value): mixed { return is_array($value) ? array_map('wp_unslash', $value) : (is_string($value) ? stripslashes($value) : $value); }
+function wp_slash(mixed $value): mixed { return is_array($value) ? array_map('wp_slash', $value) : (is_string($value) ? addslashes($value) : $value); }
 function sanitize_text_field(string $value): string { return trim($value); }
 function wp_verify_nonce(string $nonce, string $action): bool { unset($nonce, $action); return true; }
 function current_user_can(string $capability, mixed ...$args): bool { unset($capability, $args); return true; }
@@ -88,12 +152,14 @@ function get_author_posts_url(int $id): string { return 'https://wordpress.examp
 function home_url(string $path = ''): string { return 'https://wordpress.example' . $path; }
 function get_post(int $id): WP_Post|null { return $GLOBALS['dbt']['posts'][$id] ?? null; }
 function get_post_meta(int $id, string $key, bool $single = false): mixed { unset($single); return $GLOBALS['dbt']['meta'][$id][$key] ?? ''; }
-function update_post_meta(int $id, string $key, mixed $value): int { $GLOBALS['dbt']['meta'][$id][$key] = $value; return 1; }
+function metadata_exists(string $type, int $id, string $key): bool { return $type === 'post' && array_key_exists($key, $GLOBALS['dbt']['meta'][$id] ?? []); }
+function update_post_meta(int $id, string $key, mixed $value): int|false { $callback = $GLOBALS['dbt']['meta_write_callback']; if (is_callable($callback) && $callback($id, $key, $value) === false) return false; $value = wp_unslash($value); if (metadata_exists('post', $id, $key) && $GLOBALS['dbt']['meta'][$id][$key] === $value) return false; $GLOBALS['dbt']['meta'][$id][$key] = $value; return 1; }
 function delete_post_meta(int $id, string $key): bool { unset($GLOBALS['dbt']['meta'][$id][$key]); return true; }
 function wp_is_post_revision(int $id): bool { return false; }
 function wp_is_post_autosave(int $id): bool { return false; }
 function wp_next_scheduled(string $hook, array $args = []): int|false { foreach ($GLOBALS['dbt']['scheduled'] as $item) if ($item[1] === $hook && $item[2] === $args) return $item[0]; return false; }
 function wp_schedule_single_event(int $timestamp, string $hook, array $args = []): bool { $GLOBALS['dbt']['scheduled'][] = [$timestamp, $hook, $args]; return true; }
+function wp_clear_scheduled_hook(string $hook, array $args = []): int { $before = count($GLOBALS['dbt']['scheduled']); $GLOBALS['dbt']['scheduled'] = array_values(array_filter($GLOBALS['dbt']['scheduled'], fn($item) => $item[1] !== $hook || $item[2] !== $args)); return $before - count($GLOBALS['dbt']['scheduled']); }
 function get_permalink(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; $slug = $GLOBALS['dbt']['posts'][$id]->post_name ?: 'post-' . $id; return 'https://wordpress.example/' . $GLOBALS['dbt']['permalink_prefix'] . $slug . '/'; }
 function get_the_title(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; return $GLOBALS['dbt']['posts'][$id]->post_title ?? ''; }
 function parse_blocks(string $content): array { return [['blockName' => null, 'innerHTML' => $content, 'innerBlocks' => []]]; }
@@ -108,15 +174,24 @@ function wp_remote_retrieve_response_code(array $response): int { return (int) (
 function wp_remote_retrieve_header(array $response, string $name): string { return (string) ($response['headers'][strtolower($name)] ?? ''); }
 function wp_remote_retrieve_body(array $response): string { return (string) ($response['body'] ?? ''); }
 function dbt_response(int $status, mixed $body, string $content_type = 'application/json'): array { return ['response' => ['code' => $status], 'headers' => ['content-type' => $content_type], 'body' => is_string($body) ? $body : json_encode($body, JSON_UNESCAPED_SLASHES)]; }
-function get_posts(array $args): array { if (($args['fields'] ?? '') === 'ids' && isset($args['meta_key'])) { $ids = []; foreach ($GLOBALS['dbt']['meta'] as $id => $meta) if (($meta[$args['meta_key']] ?? null) === ($args['meta_value'] ?? null)) $ids[] = $id; return array_slice($ids, 0, (int) ($args['posts_per_page'] ?? 5)); } return array_values($GLOBALS['dbt']['posts']); }
+function get_posts(array $args): array {
+    $posts = array_filter($GLOBALS['dbt']['posts'], static function (WP_Post $post) use ($args): bool {
+        if (isset($args['post_type']) && !in_array($post->post_type, (array) $args['post_type'], true)) return false;
+        if (isset($args['post_status']) && !in_array($post->post_status, (array) $args['post_status'], true)) return false;
+        return !isset($args['meta_key']) || get_post_meta($post->ID, $args['meta_key'], true) === ($args['meta_value'] ?? null);
+    });
+    $results = ($args['fields'] ?? '') === 'ids' ? array_map(static fn(WP_Post $post): int => $post->ID, array_values($posts)) : array_values($posts);
+    return array_slice($results, 0, (int) ($args['posts_per_page'] ?? 5));
+}
 function url_to_postid(string $url): int { foreach ($GLOBALS['dbt']['posts'] as $post) if (get_permalink($post) === $url) return $post->ID; return 0; }
-function wp_insert_post(array $data, bool $wp_error = false): int|WP_Error { unset($wp_error); $id = (int) ($data['ID'] ?: $GLOBALS['dbt']['next_post_id']++); $post = $GLOBALS['dbt']['posts'][$id] ?? new WP_Post($id); foreach (['post_type','post_status','post_name','post_title','post_content','post_author'] as $key) if (array_key_exists($key, $data)) $post->{$key} = $data[$key]; $GLOBALS['dbt']['posts'][$id] = $post; $GLOBALS['dbt']['inserted'][] = $data; return $id; }
+function wp_insert_post(array $data, bool $wp_error = false): int|WP_Error { unset($wp_error); $id = (int) ($data['ID'] ?: $GLOBALS['dbt']['next_post_id']++); $post = $GLOBALS['dbt']['posts'][$id] ?? new WP_Post($id); foreach (['post_type','post_status','post_name','post_title','post_content','post_author'] as $key) if (array_key_exists($key, $data)) $post->{$key} = wp_unslash($data[$key]); $GLOBALS['dbt']['posts'][$id] = $post; $GLOBALS['dbt']['inserted'][] = $data; $callback = $GLOBALS['dbt']['wp_insert_callback']; return is_callable($callback) ? $callback($id, $data) : $id; }
 function wp_update_post(array $data): int|WP_Error { $callback = $GLOBALS['dbt']['wp_update_callback']; return is_callable($callback) ? $callback($data) : wp_insert_post($data, true); }
 function wp_delete_post(int $id, bool $force = false): WP_Post|false { unset($force); $post = $GLOBALS['dbt']['posts'][$id] ?? false; unset($GLOBALS['dbt']['posts'][$id], $GLOBALS['dbt']['meta'][$id]); $GLOBALS['dbt']['deleted'][] = $id; return $post; }
 function clean_post_cache(int $id): void {}
 function untrailingslashit(string $value): string { return rtrim($value, '/'); }
 function get_transient(string $key): mixed { return $GLOBALS['dbt']['transients'][$key] ?? false; }
 function set_transient(string $key, mixed $value, int $ttl): bool { unset($ttl); $GLOBALS['dbt']['transients'][$key] = $value; return true; }
+function delete_transient(string $key): bool { unset($GLOBALS['dbt']['transients'][$key]); return true; }
 function apply_filters(string $hook, mixed $value, ...$args): mixed { unset($hook, $args); return $value; }
 function esc_url(string $value): string { return htmlspecialchars($value, ENT_QUOTES); }
 function esc_html(string $value): string { return htmlspecialchars($value, ENT_QUOTES); }
@@ -142,6 +217,7 @@ function add_action(string $hook, callable|array $callback, int $priority = 10, 
 function add_filter(string $hook, callable|array $callback, int $priority = 10, int $args = 1): void { $GLOBALS['dbt']['filters'][] = [$hook, $callback, $priority, $args]; }
 function add_shortcode(string $tag, callable|array $callback): void { $GLOBALS['dbt']['shortcodes'][$tag] = $callback; }
 function get_post_types(array $args = [], string $output = 'names'): array { unset($args, $output); return ['post' => 'post', 'page' => 'page', 'attachment' => 'attachment']; }
+function get_post_stati(array $args = [], string $output = 'names'): array { unset($args, $output); return array_combine(['publish', 'draft', 'private', 'pending', 'future', 'trash', 'auto-draft', 'inherit'], ['publish', 'draft', 'private', 'pending', 'future', 'trash', 'auto-draft', 'inherit']); }
 
 require_once __DIR__ . '/../src/Settings.php';
 require_once __DIR__ . '/../src/Client.php';

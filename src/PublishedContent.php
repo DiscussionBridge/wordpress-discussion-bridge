@@ -19,11 +19,46 @@ final class PublishedContent
         if ($html === '') {
             return new WP_Error('discussionbridge_empty_content', 'Published content is empty.');
         }
-        if (strlen($html) > self::MAX_BYTES) {
-            return new WP_Error('discussionbridge_content_too_large', 'Published content exceeds the DiscussionBridge limit.');
+        if (preg_match('//u', $html) !== 1) {
+            return new WP_Error('discussionbridge_invalid_content_encoding', 'Published content is not valid UTF8.');
         }
 
         return $html;
+    }
+
+    /** Keep the native source complete; only the transmitted topic body is excerpted. */
+    public static function excerpt(string $html, string $canonical_url, int $maximum_bytes = self::MAX_BYTES): string|WP_Error
+    {
+        if (strlen($html) <= $maximum_bytes) {
+            return $html;
+        }
+        $suffix = '<p><a href="' . esc_url($canonical_url) . '">Read More</a></p>';
+        $text = html_entity_decode(wp_strip_all_tags(preg_replace('/<\/(?:p|div|li|h[1-6]|tr)>/i', "\n", $html) ?? $html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? '');
+        if ($text === '') {
+            $text = 'Continue reading at the source.';
+        }
+        if ($maximum_bytes <= strlen($suffix) + 7 || preg_match('//u', $text) !== 1) {
+            return new WP_Error('discussionbridge_excerpt_unavailable', 'The source excerpt cannot fit within the delivery limit.');
+        }
+        $low = 0;
+        $high = strlen($text);
+        $best = '';
+        while ($low <= $high) {
+            $length = intdiv($low + $high, 2);
+            $prefix = substr($text, 0, $length);
+            while ($prefix !== '' && preg_match('//u', $prefix) !== 1) {
+                $prefix = substr($prefix, 0, -1);
+            }
+            $candidate = '<p>' . esc_html($prefix) . '</p>' . $suffix;
+            if (strlen($candidate) <= $maximum_bytes) {
+                $best = $candidate;
+                $low = $length + 1;
+            } else {
+                $high = $length - 1;
+            }
+        }
+        return $best === '' ? new WP_Error('discussionbridge_excerpt_unavailable', 'The source excerpt cannot fit within the delivery limit.') : $best;
     }
 
     /**

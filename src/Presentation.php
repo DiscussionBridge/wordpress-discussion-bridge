@@ -10,7 +10,9 @@ final class Presentation
     private const INITIAL_SIMPLE_REPLIES = 5;
     private const MAX_SIMPLE_REPLIES = 50;
     public const COMMENTS_MODE_META = '_discussionbridge_comments_mode';
+    public const RICH_CONTENT_META = '_discussionbridge_rich_content';
     private static bool $embed_enqueued = false;
+    private static int $embed_sequence = 0;
 
     public static function native_comments_open(bool $open, int $post_id): bool
     {
@@ -31,9 +33,10 @@ final class Presentation
     /** @param array<string, mixed> $attributes */
     public static function render_block(array $attributes): string
     {
+        $mode = array_key_exists('commentsMode', $attributes) ? $attributes['commentsMode'] : 'interactive';
         return self::render(
             (string) ($attributes['resourceId'] ?? ''),
-            self::valid_mode((string) ($attributes['commentsMode'] ?? 'interactive'))
+            self::valid_mode(is_string($mode) ? $mode : '')
         );
     }
 
@@ -57,7 +60,8 @@ final class Presentation
                 DISCUSSIONBRIDGE_WORDPRESS_VERSION
             );
             $post_id = (int) get_queried_object_id();
-            if ($post_id > 0 && get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1') {
+            if ($post_id > 0 && get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1'
+                && self::rich_content_enabled($post_id)) {
                 wp_enqueue_script(
                     'discussionbridge-rich-content',
                     plugins_url('assets/discussionbridge-rich-content.js', DISCUSSIONBRIDGE_WORDPRESS_FILE),
@@ -73,7 +77,7 @@ final class Presentation
         }
         $mode = self::current_comments_mode();
         if (!in_array($mode, ['none', 'simple'], true)) {
-            self::enqueue_embed($mapping['topic_id'], $mode, false);
+            self::enqueue_embed($mapping['topic_id'], $mode, self::current_is_source_presentation());
         }
     }
 
@@ -97,12 +101,13 @@ final class Presentation
         }
 
         return TableOfContents::render($content) . sprintf(
-            '<section class="discussionbridge-discussion discussionbridge-discussion--%s" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>%s</section>',
+            '<section class="discussionbridge-discussion discussionbridge-discussion--%s" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div>%s%s</section>',
             esc_attr($mode),
             esc_attr($mapping['resource_id']),
             esc_html__('Discussion', 'discussionbridge'),
             esc_url($mapping['topic_url']),
             esc_html__('Open in Discourse', 'discussionbridge'),
+            self::embed_markup($mapping['topic_id'], $mode, self::current_is_source_presentation()),
             self::credit()
         );
     }
@@ -133,6 +138,11 @@ final class Presentation
         ];
     }
 
+    private static function current_is_source_presentation(): bool
+    {
+        return get_post_meta((int) get_queried_object_id(), Materializer::IMPORTED_META, true) === '1';
+    }
+
     private static function render(string $requested_resource_id, string $comments_mode): string
     {
         $resource_id = trim($requested_resource_id);
@@ -141,16 +151,36 @@ final class Presentation
         }
 
         $cache_key = 'discussionbridge_record_' . hash('sha256', Settings::connection_id() . "\n" . $resource_id);
-        $record = get_transient($cache_key);
-        if (!is_array($record)) {
-            $response = (new Client())->record($resource_id);
-            if (is_wp_error($response) || !isset($response['bridge_record']) || !is_array($response['bridge_record'])) {
+        $cached = get_transient($cache_key);
+        $client = new Client();
+        // Fresh authenticated metadata is required even when the body is cached.
+        $response = $client->record($resource_id, true);
+        if (is_wp_error($response) || !is_array($response['bridge_record'] ?? null)) {
+            return '';
+        }
+        $record = $response['bridge_record'];
+        if (($record['resource_id'] ?? null) !== $resource_id || ($record['source']['status'] ?? null) === 'withdrawn'
+            || ($record['direction'] ?? null) !== 'from_discourse' || ($record['state'] ?? null) !== 'healthy') {
+            delete_transient($cache_key);
+            return '';
+        }
+        $edition = $record['source']['edition'] ?? null;
+        $descriptor = $record['source']['content'] ?? null;
+        if (is_string($edition) && preg_match('/\A[a-f0-9]{64}\z/D', $edition) === 1
+            && is_array($cached) && ($cached['source']['edition'] ?? null) === $edition
+            && is_string($cached['content_html'] ?? null) && is_array($descriptor)
+            && ($descriptor['bytes'] ?? null) === strlen($cached['content_html'])
+            && ($descriptor['sha256'] ?? null) === hash('sha256', $cached['content_html'])) {
+            $record['content_html'] = $cached['content_html'];
+        } else {
+            $record = $client->publication_content($record);
+            if (is_wp_error($record) || ($record['source']['status'] ?? null) === 'withdrawn') {
+                delete_transient($cache_key);
                 return '';
             }
-            $record = $response['bridge_record'];
-            $ttl = (int) apply_filters('discussionbridge_record_cache_ttl', 300, $resource_id);
-            set_transient($cache_key, $record, min(3600, max(30, $ttl)));
         }
+        $ttl = (int) apply_filters('discussionbridge_record_cache_ttl', 300, $resource_id);
+        set_transient($cache_key, $record, min(3600, max(30, $ttl)));
 
         if (($record['direction'] ?? null) !== 'from_discourse'
             || ($record['state'] ?? null) !== 'healthy'
@@ -169,10 +199,11 @@ final class Presentation
             } else {
                 self::enqueue_embed($record['topic_id'], $comments_mode, $comments_mode === 'interactive');
                 $discussion = sprintf(
-                    '<div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div><div id="discourse-comments"></div>',
+                    '<div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div>%s',
                     esc_html__('Discussion', 'discussionbridge'),
                     esc_url($record['topic_url']),
-                    esc_html__('Open in Discourse', 'discussionbridge')
+                    esc_html__('Open in Discourse', 'discussionbridge'),
+                    self::embed_markup($record['topic_id'], $comments_mode, $comments_mode === 'interactive')
                 );
             }
         }
@@ -244,6 +275,17 @@ final class Presentation
         $post_id = get_queried_object_id();
         $mode = $post_id > 0 ? (string) get_post_meta($post_id, self::COMMENTS_MODE_META, true) : '';
         return $mode === '' ? Settings::comments_mode() : self::valid_mode($mode);
+    }
+
+    public static function rich_content_enabled(int $post_id): bool
+    {
+        $local = (string) get_post_meta($post_id, self::RICH_CONTENT_META, true);
+        if ($local === 'enabled' || $local === 'disabled') {
+            return $local === 'enabled';
+        }
+        $site = Settings::rich_content();
+        // Existing imports without a new choice retain their previously active renderer.
+        return $site === 'enabled' || ($site === 'preserve' && $local === '');
     }
 
     private static function valid_mode(string $value): string
@@ -333,7 +375,7 @@ final class Presentation
         }
         if (count($stream) - 1 > self::MAX_SIMPLE_REPLIES) {
             $replies .= '<p class="discussionbridge-simple__limit">' . esc_html(sprintf(__('Showing the first %d comments.', 'discussionbridge'), self::MAX_SIMPLE_REPLIES))
-                . ' <a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('View the complete discussion on The Bridge', 'discussionbridge') . '</a>.</p>';
+                . ' <a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('View the complete discussion at source', 'discussionbridge') . '</a>.</p>';
         }
         wp_enqueue_style('discussionbridge-presentation', plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION);
         return '<section class="discussionbridge-simple"><div class="discussionbridge-discussion__header"><h2>' . esc_html__('Comments', 'discussionbridge')
@@ -389,27 +431,29 @@ final class Presentation
         );
         wp_register_script(
             'discussionbridge-discourse-embed',
-            Settings::server_url() . '/javascripts/embed.js',
+            plugins_url('assets/discussionbridge-embed.js', DISCUSSIONBRIDGE_WORDPRESS_FILE),
             [],
-            null,
+            DISCUSSIONBRIDGE_WORDPRESS_VERSION,
             true
         );
-        $configuration = [
-            'discourseUrl' => Settings::server_url() . '/',
-            'topicId' => $topic_id,
-        ];
+        wp_enqueue_script('discussionbridge-discourse-embed');
+    }
+
+    /** Native /embed/comments supports one topic per iframe; avoid its global single-target wrapper. */
+    private static function embed_markup(int $topic_id, string $mode, bool $source_presentation): string
+    {
+        self::enqueue_embed($topic_id, $mode, $source_presentation);
+        $query = ['topic_id' => $topic_id];
         if ($mode === 'interactive') {
-            $configuration['fullApp'] = true;
-            $configuration['dynamicHeight'] = false;
+            $query['full_app'] = 'true';
             if ($source_presentation) {
-                $configuration['className'] = 'discussion-bridge-source-presentation';
+                $query['class_name'] = 'discussion-bridge-source-presentation';
             }
         }
-        wp_add_inline_script(
-            'discussionbridge-discourse-embed',
-            'window.DiscourseEmbed=' . wp_json_encode($configuration, JSON_UNESCAPED_SLASHES) . ';',
-            'before'
-        );
-        wp_enqueue_script('discussionbridge-discourse-embed');
+        $src = Settings::server_url() . '/embed/comments?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        return sprintf('<iframe id="discussionbridge-embed-%d" class="discussionbridge-embed" data-discussionbridge-embed="%s" src="%s" title="%s" width="100%%" height="%d" frameborder="0" scrolling="%s" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
+            ++self::$embed_sequence, esc_attr($mode), esc_url($src),
+            esc_attr(sprintf(__('Discourse discussion %d', 'discussionbridge'), $topic_id)),
+            $mode === 'interactive' ? 600 : 150, $mode === 'interactive' ? 'yes' : 'no');
     }
 }

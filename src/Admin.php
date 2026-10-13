@@ -75,6 +75,7 @@ final class Admin
     {
         return match ($outcome) {
             'materialized' => __('Post created', 'discussionbridge'),
+            'withdrawn' => __('Source withdrawn; post unpublished', 'discussionbridge'),
             'updated' => __('Post updated', 'discussionbridge'),
             'created' => __('Discourse topic created', 'discussionbridge'),
             'resolved' => $reason === 'existing_bridge_record'
@@ -119,8 +120,8 @@ final class Admin
         $stored_comments_mode = (string) get_post_meta($post->ID, Presentation::COMMENTS_MODE_META, true);
         $comments_mode = $stored_comments_mode === '' ? '' : Settings::sanitize_comments_mode($stored_comments_mode);
         ?>
-        <label><input type="checkbox" name="discussionbridge_enabled" value="1" <?php checked($enabled); ?>> <?php echo esc_html__('Create or retain this post’s DiscussionBridge record when it is first published.', 'discussionbridge'); ?></label>
-        <p class="description"><?php echo esc_html__('Later edits do not rewrite the Discourse topic. Use the status page for an exact retry.', 'discussionbridge'); ?></p>
+        <label><input type="checkbox" name="discussionbridge_enabled" value="1" <?php checked($enabled); ?>> <?php echo esc_html__('Publish this post and its later source edits through DiscussionBridge.', 'discussionbridge'); ?></label>
+        <p class="description"><?php echo esc_html__('Updates retain the same topic. Conflicting edits in Discourse require reconciliation.', 'discussionbridge'); ?></p>
         <p><label for="discussionbridge_comments_mode"><strong><?php echo esc_html__('Discussion mode', 'discussionbridge'); ?></strong></label></p>
         <select id="discussionbridge_comments_mode" name="discussionbridge_comments_mode">
             <option value="" <?php selected($comments_mode, ''); ?>><?php echo esc_html__('Use site default', 'discussionbridge'); ?></option>
@@ -129,6 +130,16 @@ final class Admin
             <option value="full" <?php selected($comments_mode, 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
             <option value="interactive" <?php selected($comments_mode, 'interactive'); ?>><?php echo esc_html__('DiscussionBridge Interactive', 'discussionbridge'); ?></option>
         </select>
+        <?php if (get_post_meta($post->ID, Materializer::IMPORTED_META, true) === '1') : ?>
+            <?php $rich = (string) get_post_meta($post->ID, Presentation::RICH_CONTENT_META, true); ?>
+            <p><label for="discussionbridge_rich_content_post"><strong><?php echo esc_html__('Rich content renderer', 'discussionbridge'); ?></strong></label></p>
+            <select id="discussionbridge_rich_content_post" name="discussionbridge_rich_content_post">
+                <option value="" <?php selected($rich, ''); ?>><?php echo esc_html__('Preserve previous choice', 'discussionbridge'); ?></option>
+                <option value="site" <?php selected($rich, 'site'); ?>><?php echo esc_html__('Use site selection', 'discussionbridge'); ?></option>
+                <option value="enabled" <?php selected($rich, 'enabled'); ?>><?php echo esc_html__('Enabled', 'discussionbridge'); ?></option>
+                <option value="disabled" <?php selected($rich, 'disabled'); ?>><?php echo esc_html__('Disabled', 'discussionbridge'); ?></option>
+            </select>
+        <?php endif; ?>
         <?php
     }
 
@@ -152,8 +163,17 @@ final class Admin
             : '';
         if ($comments_mode === '') {
             delete_post_meta($post_id, Presentation::COMMENTS_MODE_META);
-        } elseif (in_array($comments_mode, ['none', 'simple', 'full', 'interactive', 'fullInteractive'], true)) {
+        } elseif (in_array($comments_mode, ['none', 'simple', 'full', 'interactive'], true)) {
             update_post_meta($post_id, Presentation::COMMENTS_MODE_META, Settings::sanitize_comments_mode($comments_mode));
+        }
+        if (get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1'
+            && isset($_POST['discussionbridge_rich_content_post'])) {
+            $rich = wp_unslash($_POST['discussionbridge_rich_content_post']);
+            if ($rich === '') {
+                delete_post_meta($post_id, Presentation::RICH_CONTENT_META);
+            } elseif (in_array($rich, ['site', 'enabled', 'disabled'], true)) {
+                update_post_meta($post_id, Presentation::RICH_CONTENT_META, $rich);
+            }
         }
         if ($post->post_status === 'publish'
             && get_post_meta($post_id, Publisher::ENABLED_META, true) === '1'
@@ -171,7 +191,7 @@ final class Admin
         $post_types = get_post_types(['public' => true], 'objects');
         $recent = get_posts([
             'post_type' => Settings::post_types(),
-            'post_status' => 'publish',
+            'post_status' => ['publish', 'draft', 'private', 'pending', 'future'],
             'posts_per_page' => 50,
             'meta_key' => '_discussionbridge_status',
             'orderby' => 'modified',
@@ -183,6 +203,7 @@ final class Admin
                 'created' => absint($_GET['created']),
                 'updated' => absint($_GET['updated']),
                 'unchanged' => absint($_GET['unchanged']),
+                'withdrawn' => absint($_GET['withdrawn'] ?? 0),
                 'failed' => absint($_GET['failed']),
             ];
         }
@@ -210,6 +231,14 @@ final class Admin
                     <tr>
                         <th scope="row"><label for="discussionbridge_connection_id"><?php echo esc_html__('Connection ID', 'discussionbridge'); ?></label></th>
                         <td><input class="regular-text" type="text" id="discussionbridge_connection_id" name="<?php echo esc_attr(Settings::CONNECTION_ID_OPTION); ?>" value="<?php echo esc_attr(Settings::connection_id()); ?>" pattern="dbc_[a-f0-9]{24}" required></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="discussionbridge_rich_content"><?php echo esc_html__('Rich content renderer', 'discussionbridge'); ?></label></th>
+                        <td><select id="discussionbridge_rich_content" name="<?php echo esc_attr(Settings::RICH_CONTENT_OPTION); ?>">
+                            <option value="preserve" <?php selected(Settings::rich_content(), 'preserve'); ?>><?php echo esc_html__('Preserve existing choices; off for new imports', 'discussionbridge'); ?></option>
+                            <option value="enabled" <?php selected(Settings::rich_content(), 'enabled'); ?>><?php echo esc_html__('Enabled', 'discussionbridge'); ?></option>
+                            <option value="disabled" <?php selected(Settings::rich_content(), 'disabled'); ?>><?php echo esc_html__('Disabled', 'discussionbridge'); ?></option>
+                        </select><p class="description"><?php echo esc_html__('Select JavaScript rendering for math and diagrams in imported content. Individual posts may override this choice.', 'discussionbridge'); ?></p></td>
                     </tr>
                     <tr>
                         <th scope="row"><?php echo esc_html__('Connection secret', 'discussionbridge'); ?></th>
@@ -247,7 +276,7 @@ final class Admin
             </form>
 
             <h2><?php echo esc_html__('Published-content delivery', 'discussionbridge'); ?></h2>
-            <p><?php echo esc_html__('Materialize authorized From Discourse publications as native WordPress posts, then update them only when the exact Discourse source revision changes.', 'discussionbridge'); ?></p>
+            <p><?php echo esc_html__('Synchronize authorized From Discourse publications as native posts, including source editions, withdrawal and restoration.', 'discussionbridge'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="discussionbridge_sync_publications">
                 <?php wp_nonce_field('discussionbridge_sync_publications'); ?>
@@ -256,10 +285,11 @@ final class Admin
             <?php if ($sync_result !== null) : ?>
                 <div class="notice <?php echo $sync_result['failed'] > 0 ? 'notice-error' : 'notice-success'; ?> inline"><p><?php
                     echo esc_html(sprintf(
-                        __('Synchronization complete: %1$d posts created, %2$d updated, %3$d already current, %4$d failed.', 'discussionbridge'),
+                        __('Synchronization complete: %1$d posts created, %2$d updated, %3$d already current, %4$d withdrawn, %5$d failed.', 'discussionbridge'),
                         $sync_result['created'],
                         $sync_result['updated'],
                         $sync_result['unchanged'],
+                        $sync_result['withdrawn'],
                         $sync_result['failed']
                     ));
                 ?></p></div>
@@ -278,8 +308,8 @@ final class Admin
                         <td><code><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_resource_id', true)); ?></code></td>
                         <td><?php $topic_url = (string) get_post_meta($post->ID, '_discussionbridge_topic_url', true); ?><?php if ($topic_url !== '') : ?><a href="<?php echo esc_url($topic_url); ?>"><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_topic_id', true)); ?></a><?php endif; ?></td>
                         <td><?php
-                            $last_outcome = (string) get_post_meta($post->ID, '_discussionbridge_last_outcome', true);
-                            $last_reason = (string) get_post_meta($post->ID, '_discussionbridge_last_reason', true);
+                            $last_outcome = Settings::diagnostic_reason((string) get_post_meta($post->ID, '_discussionbridge_last_outcome', true));
+                            $last_reason = Settings::diagnostic_reason((string) get_post_meta($post->ID, '_discussionbridge_last_reason', true));
                             ?><strong><?php echo esc_html(self::operator_result_label($last_outcome, $last_reason)); ?></strong><?php
                             if ($last_outcome !== '' || $last_reason !== '') :
                             ?><details><summary><?php echo esc_html__('Technical details', 'discussionbridge'); ?></summary><code><?php echo esc_html($last_outcome); ?><?php if ($last_reason !== '') : ?> / <?php echo esc_html($last_reason); ?><?php endif; ?></code></details><?php

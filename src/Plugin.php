@@ -23,6 +23,7 @@ final class Plugin
         add_filter('the_content', [Presentation::class, 'append_mapped_discussion']);
         add_filter('comments_open', [Presentation::class, 'native_comments_open'], 10, 2);
         add_filter('pings_open', [Presentation::class, 'native_comments_open'], 10, 2);
+        add_filter('posts_clauses', [Materializer::class, 'source_time_query_clauses'], 10, 2);
         add_shortcode('discussionbridge_record', [Presentation::class, 'shortcode']);
     }
 
