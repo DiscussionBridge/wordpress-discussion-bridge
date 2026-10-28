@@ -48,9 +48,7 @@
 }
 
 .discussionbridge-discussion--interactive iframe,
-.discussionbridge-record--interactive iframe,
-.discussionbridge-discussion--fullInteractive iframe,
-.discussionbridge-record--fullInteractive iframe {
+.discussionbridge-record--interactive iframe {
   min-height: 360px;
   height: 800px !important;
 }
@@ -143,9 +141,7 @@
   .discussionbridge-simple__meta { align-items: flex-start; flex-direction: column; gap: 0.2rem; }
 
   .discussionbridge-discussion--interactive iframe,
-  .discussionbridge-record--interactive iframe,
-  .discussionbridge-discussion--fullInteractive iframe,
-  .discussionbridge-record--fullInteractive iframe {
+  .discussionbridge-record--interactive iframe {
     height: min(800px, 75vh) !important;
   }
 }

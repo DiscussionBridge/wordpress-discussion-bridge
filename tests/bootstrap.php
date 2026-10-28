@@ -2,187 +2,79 @@
 
 declare(strict_types=1);
 
-const ABSPATH = '/srv/www/wordpress/';
-const DISCUSSIONBRIDGE_WORDPRESS_FILE = __DIR__ . '/../wordpress-discussion-bridge.php';
-const DISCUSSIONBRIDGE_WORDPRESS_VERSION = '0.2.0-alpha.43';
-const MINUTE_IN_SECONDS = 60;
-
-final class WP_Error
-{
-    public function __construct(private string $code, private string $message = '', private mixed $data = null) {}
+class WP_Error {
+    public function __construct(private string $code, private string $message = '') {}
     public function get_error_code(): string { return $this->code; }
     public function get_error_message(): string { return $this->message; }
-    public function get_error_data(): mixed { return $this->data; }
 }
-
-final class WP_Post
-{
-    public function __construct(
-        public int $ID,
-        public string $post_status = 'draft',
-        public string $post_type = 'post',
-        public string $post_title = '',
-        public string $post_content = '',
-        public int $post_author = 0,
-        public string $post_name = '',
-        public string $post_date = '2026-09-14 20:58:09',
-        public string $post_date_gmt = '2026-09-14 20:58:09'
-    ) {}
+class WP_Post {
+    public int $ID = 1; public string $post_status = 'publish'; public string $post_type = 'post'; public string $post_name = 'native-source';
+    public string $post_title = 'Native title'; public string $post_content = '<p>Native article</p>'; public int $post_author = 7;
+    public string $post_date_gmt = '2026-10-14 03:04:05'; public string $post_modified_gmt = '0000-00-00 00:00:00';
 }
-
-final class WP_User
-{
-    public function __construct(
-        public int $ID,
-        public string $user_login,
-        public string $display_name,
-        public array $capabilities = []
-    ) {}
+class WP_User { public int $ID = 7; public string $display_name = 'Native Author'; }
+class NativeTestDb {
+    public string $posts = 'wp_posts'; public string $last_error = '';
+    public function __construct(public string $connection) {}
+    public function prepare(string $query, string ...$values): string {
+        foreach ($values as $value) $query = preg_replace('/%s/', "'" . str_replace("'", "''", $value) . "'", $query, 1);
+        return $query;
+    }
+    public function get_var(string $query): string|null {
+        if ($query === 'SELECT CONNECTION_ID()') return $this->connection;
+        preg_match("/\('([^']+)'/", $query, $match); $name = $match[1] ?? '';
+        if (str_contains($query, 'IS_USED_LOCK')) return ($GLOBALS['native']['locks'][$name] ?? null) === $this->connection ? '1' : '0';
+        if (str_contains($query, 'GET_LOCK')) {
+            if (isset($GLOBALS['native']['locks'][$name]) && $GLOBALS['native']['locks'][$name] !== $this->connection) return '0';
+            $GLOBALS['native']['locks'][$name] = $this->connection; return '1';
+        }
+        if (str_contains($query, 'RELEASE_LOCK')) {
+            if (($GLOBALS['native']['locks'][$name] ?? null) !== $this->connection) return '0';
+            unset($GLOBALS['native']['locks'][$name]); return '1';
+        }
+        throw new RuntimeException('Unexpected native test query');
+    }
+    public function get_row(string $query): object|null {
+        preg_match("/ID = '([0-9]+)'/", $query, $match); $post = $GLOBALS['native']['posts'][(int) ($match[1] ?? 0)] ?? null;
+        return $post === null ? null : (object) get_object_vars($post);
+    }
 }
-
-final class WP_Term
-{
-    public function __construct(
-        public int $term_id,
-        public string $name,
-        public string $taxonomy,
-        public int $parent = 0
-    ) {}
+function native_reset(): void {
+    $GLOBALS['native'] = ['locks' => [], 'posts' => [1 => new WP_Post()], 'meta' => [1 => ['owned' => 'current']], 'options' => [],
+        'hooks' => [], 'fail_option' => false, 'owned' => [1 => true], 'cached_post' => null];
+    $GLOBALS['wpdb'] = new NativeTestDb('101');
 }
-
-$GLOBALS['dbt'] = [];
-
-function dbt_reset(): void
-{
-    $GLOBALS['dbt'] = [
-        'options' => [
-            'discussionbridge_server_url' => 'https://bridge.example',
-            'discussionbridge_connection_id' => 'dbc_aaaaaaaaaaaaaaaaaaaaaaaa',
-            'discussionbridge_site_id' => '11111111-1111-4111-8111-111111111111',
-            'discussionbridge_lane' => 'wordpress',
-            'discussionbridge_post_types' => ['post'],
-            'discussionbridge_comments_mode' => 'fullInteractive',
-            'discussionbridge_service_author' => 'bridge-service',
-        ],
-        'users' => [
-            7 => new WP_User(7, 'bridge-service', 'DiscussionBridge Service', ['publish_posts' => true]),
-            9 => new WP_User(9, 'source-author', 'Source Author', ['publish_posts' => true]),
-        ],
-        'posts' => [], 'meta' => [], 'scheduled' => [], 'requests' => [], 'responses' => [],
-        'transients' => [], 'actions' => [], 'filters' => [], 'styles' => [], 'scripts' => [],
-        'settings_errors' => [], 'inserted' => [], 'deleted' => [], 'next_post_id' => 100,
-        'queried_id' => 0, 'is_admin' => false, 'is_singular' => true, 'in_loop' => true,
-        'main_query' => true, 'uuid_counter' => 1, 'wp_update_callback' => null,
-        'permalink_prefix' => '',
-        'dated_permalinks' => false,
-        'current_post_date' => '2026-09-16 19:17:48',
-        'terms' => [
-            new WP_Term(4, 'News', 'category'),
-            new WP_Term(8, 'Policy', 'post_tag'),
-        ],
-        'get_terms_callback' => null,
-        'object_terms' => [],
-    ];
-}
-
 function is_wp_error(mixed $value): bool { return $value instanceof WP_Error; }
-function get_option(string $key, mixed $default = false): mixed { return $GLOBALS['dbt']['options'][$key] ?? $default; }
-function update_option(string $key, mixed $value, bool $autoload = true): bool { $GLOBALS['dbt']['options'][$key] = $value; return true; }
-function add_option(string $key, mixed $value, string $deprecated = '', bool $autoload = true): bool { if (array_key_exists($key, $GLOBALS['dbt']['options'])) return false; $GLOBALS['dbt']['options'][$key] = $value; return true; }
-function delete_option(string $key): bool { unset($GLOBALS['dbt']['options'][$key]); return true; }
-function register_setting(...$args): void {}
-function add_settings_error(string $setting, string $code, string $message): void { $GLOBALS['dbt']['settings_errors'][] = [$setting, $code, $message]; }
-function wp_salt(string $scheme = 'auth'): string { return 'discussionbridge-test-' . $scheme . '-salt'; }
-function wp_unslash(mixed $value): mixed { return $value; }
-function sanitize_text_field(string $value): string { return trim($value); }
-function wp_verify_nonce(string $nonce, string $action): bool { unset($nonce, $action); return true; }
-function current_user_can(string $capability, mixed ...$args): bool { unset($capability, $args); return true; }
-function sanitize_user(string $value, bool $strict = false): string { unset($strict); return strtolower(preg_replace('/[^a-zA-Z0-9_.@-]/', '', $value) ?? ''); }
-function sanitize_key(string $value): string { return strtolower(preg_replace('/[^a-z0-9_\-]/', '', $value) ?? ''); }
-function sanitize_title(string $value): string { return trim(strtolower(preg_replace('/[^a-z0-9]+/i', '-', $value) ?? ''), '-'); }
-function wp_parse_url(string $url, int $component = -1): mixed { return parse_url($url, $component); }
-function wp_is_uuid(mixed $value): bool { return is_string($value) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value) === 1; }
-function wp_generate_uuid4(): string { return sprintf('00000000-0000-4000-8000-%012d', $GLOBALS['dbt']['uuid_counter']++); }
-function get_user_by(string $field, mixed $value): WP_User|false { foreach ($GLOBALS['dbt']['users'] as $user) { if (($field === 'login' && $user->user_login === $value) || ($field === 'id' && $user->ID === (int) $value)) return $user; } return false; }
-function get_users(array $args = []): array { unset($args); return array_values(array_filter($GLOBALS['dbt']['users'], fn(WP_User $user): bool => user_can($user, 'publish_posts'))); }
-function user_can(WP_User $user, string $capability): bool { return !empty($user->capabilities[$capability]); }
-function get_author_posts_url(int $id): string { return 'https://wordpress.example/author/' . ($GLOBALS['dbt']['users'][$id]->user_login ?? 'unknown') . '/'; }
-function home_url(string $path = ''): string { return 'https://wordpress.example' . $path; }
-function get_post(int $id): WP_Post|null { return $GLOBALS['dbt']['posts'][$id] ?? null; }
-function get_post_meta(int $id, string $key, bool $single = false): mixed { unset($single); return $GLOBALS['dbt']['meta'][$id][$key] ?? ''; }
-function update_post_meta(int $id, string $key, mixed $value): int { $GLOBALS['dbt']['meta'][$id][$key] = $value; return 1; }
-function delete_post_meta(int $id, string $key): bool { unset($GLOBALS['dbt']['meta'][$id][$key]); return true; }
-function wp_is_post_revision(int $id): bool { return false; }
-function wp_is_post_autosave(int $id): bool { return false; }
-function wp_next_scheduled(string $hook, array $args = []): int|false { foreach ($GLOBALS['dbt']['scheduled'] as $item) if ($item[1] === $hook && $item[2] === $args) return $item[0]; return false; }
-function wp_schedule_single_event(int $timestamp, string $hook, array $args = []): bool { $GLOBALS['dbt']['scheduled'][] = [$timestamp, $hook, $args]; return true; }
-function get_permalink(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; $stored = $GLOBALS['dbt']['posts'][$id]; if (in_array($stored->post_status, ['auto-draft','draft','pending','future'], true)) return 'https://wordpress.example/?p=' . $id; $slug = $stored->post_name ?: 'post-' . $id; $prefix = $GLOBALS['dbt']['dated_permalinks'] ? str_replace('-', '/', substr($stored->post_date, 0, 10)) . '/' : $GLOBALS['dbt']['permalink_prefix']; return 'https://wordpress.example/' . $prefix . $slug . '/'; }
-function get_sample_permalink(WP_Post|int $post): array { $id = $post instanceof WP_Post ? $post->ID : $post; $stored = $GLOBALS['dbt']['posts'][$id]; $slug = $stored->post_name ?: sanitize_title($stored->post_title); $prefix = $GLOBALS['dbt']['dated_permalinks'] ? str_replace('-', '/', substr($stored->post_date, 0, 10)) . '/' : $GLOBALS['dbt']['permalink_prefix']; $token = $stored->post_type === 'page' ? '%pagename%' : '%postname%'; return ['https://wordpress.example/' . $prefix . $token . '/', $slug]; }
-function get_the_title(WP_Post|int $post): string { $id = $post instanceof WP_Post ? $post->ID : $post; return $GLOBALS['dbt']['posts'][$id]->post_title ?? ''; }
-function parse_blocks(string $content): array { return [['blockName' => null, 'innerHTML' => $content, 'innerBlocks' => []]]; }
-function serialize_blocks(array $blocks): string { return implode('', array_map(fn($b) => (string) ($b['innerHTML'] ?? ''), $blocks)); }
+function home_url(string $suffix = ''): string { return 'https://wordpress.example' . $suffix; }
+function get_option(string $key, mixed $default = false): mixed { return $GLOBALS['native']['options'][$key] ?? $default; }
+function update_option(string $key, mixed $value, bool $autoload = true): bool { unset($autoload); if ($GLOBALS['native']['fail_option']) return false; $GLOBALS['native']['options'][$key] = $value; return true; }
+function wp_cache_delete(mixed $id, string $group): bool { unset($id, $group); return true; }
+function wp_salt(string $scheme): string { return 'native-isolated-fixture-' . $scheme; }
+function clean_post_cache(int $id): void { unset($id); $GLOBALS['native']['cached_post'] = null; }
+function get_post(int $id): WP_Post|null { return $GLOBALS['native']['cached_post'] ?? $GLOBALS['native']['posts'][$id] ?? null; }
+function wp_is_post_revision(int $id): bool { return $id === 99; }
+function wp_is_post_autosave(int $id): bool { return $id === 98; }
+function get_permalink(WP_Post $post): string { return home_url('/' . $post->post_name . '/'); }
+function get_the_title(WP_Post $post): string { return $post->post_title; }
+function get_user_by(string $field, int $id): WP_User|false { unset($field); return $id === 7 ? new WP_User() : false; }
+function wp_json_encode(mixed $value): string|false { return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); }
+function parse_blocks(string $content): array { return [['blockName' => null, 'innerHTML' => $content]]; }
+function serialize_blocks(array $blocks): string { return implode('', array_column($blocks, 'innerHTML')); }
 function do_blocks(string $content): string { return $content; }
-function wp_kses_post(string $html): string { return preg_replace('#<script\b[^>]*>.*?</script>#is', '', $html) ?? ''; }
+function wp_kses_post(string $content): string { return preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $content) ?? ''; }
 function wp_strip_all_tags(string $value): string { return strip_tags($value); }
-function wp_json_encode(mixed $value, int $flags = 0): string|false { return json_encode($value, $flags); }
-function wp_safe_remote_request(string $url, array $args): array|WP_Error { $GLOBALS['dbt']['requests'][] = [$url, $args]; $response = $GLOBALS['dbt']['responses'][$url] ?? null; return is_callable($response) ? $response($url, $args) : ($response ?? new WP_Error('missing_mock')); }
-function wp_safe_remote_get(string $url, array $args): array|WP_Error { return wp_safe_remote_request($url, $args); }
-function wp_remote_retrieve_response_code(array $response): int { return (int) ($response['response']['code'] ?? 0); }
-function wp_remote_retrieve_header(array $response, string $name): string { return (string) ($response['headers'][strtolower($name)] ?? ''); }
-function wp_remote_retrieve_body(array $response): string { return (string) ($response['body'] ?? ''); }
-function dbt_response(int $status, mixed $body, string $content_type = 'application/json'): array { return ['response' => ['code' => $status], 'headers' => ['content-type' => $content_type], 'body' => is_string($body) ? $body : json_encode($body, JSON_UNESCAPED_SLASHES)]; }
-function get_posts(array $args): array { if (($args['fields'] ?? '') === 'ids' && isset($args['meta_key'])) { $ids = []; foreach ($GLOBALS['dbt']['meta'] as $id => $meta) if (($meta[$args['meta_key']] ?? null) === ($args['meta_value'] ?? null)) $ids[] = $id; return array_slice($ids, 0, (int) ($args['posts_per_page'] ?? 5)); } return array_values($GLOBALS['dbt']['posts']); }
-function url_to_postid(string $url): int { foreach ($GLOBALS['dbt']['posts'] as $post) if (get_permalink($post) === $url) return $post->ID; return 0; }
-function wp_insert_post(array $data, bool $wp_error = false): int|WP_Error { unset($wp_error); $id = (int) ($data['ID'] ?: $GLOBALS['dbt']['next_post_id']++); $post = $GLOBALS['dbt']['posts'][$id] ?? new WP_Post($id); foreach (['post_type','post_status','post_name','post_title','post_content','post_author'] as $key) if (array_key_exists($key, $data)) $post->{$key} = $data[$key]; $post->post_date = $data['post_date'] ?? $GLOBALS['dbt']['current_post_date']; $post->post_date_gmt = $data['post_date_gmt'] ?? $GLOBALS['dbt']['current_post_date']; $GLOBALS['dbt']['posts'][$id] = $post; $GLOBALS['dbt']['inserted'][] = $data; return $id; }
-function wp_update_post(array $data): int|WP_Error { $callback = $GLOBALS['dbt']['wp_update_callback']; return is_callable($callback) ? $callback($data) : wp_insert_post($data, true); }
-function wp_delete_post(int $id, bool $force = false): WP_Post|false { unset($force); $post = $GLOBALS['dbt']['posts'][$id] ?? false; unset($GLOBALS['dbt']['posts'][$id], $GLOBALS['dbt']['meta'][$id]); $GLOBALS['dbt']['deleted'][] = $id; return $post; }
-function clean_post_cache(int $id): void {}
-function untrailingslashit(string $value): string { return rtrim($value, '/'); }
-function get_transient(string $key): mixed { return $GLOBALS['dbt']['transients'][$key] ?? false; }
-function set_transient(string $key, mixed $value, int $ttl): bool { unset($ttl); $GLOBALS['dbt']['transients'][$key] = $value; return true; }
-function apply_filters(string $hook, mixed $value, ...$args): mixed { unset($hook, $args); return $value; }
-function esc_url(string $value): string { return htmlspecialchars($value, ENT_QUOTES); }
-function esc_html(string $value): string { return htmlspecialchars($value, ENT_QUOTES); }
-function esc_attr(string $value): string { return htmlspecialchars($value, ENT_QUOTES); }
-function esc_html__(string $value, string $domain = ''): string { unset($domain); return $value; }
-function esc_attr__(string $value, string $domain = ''): string { unset($domain); return $value; }
-function __(string $value, string $domain = ''): string { unset($domain); return $value; }
-function _n(string $single, string $plural, int $number, string $domain = ''): string { unset($domain); return $number === 1 ? $single : $plural; }
-function shortcode_atts(array $pairs, array $atts, string $shortcode = ''): array { unset($shortcode); return array_merge($pairs, $atts); }
-function plugins_url(string $path, string $plugin): string { unset($plugin); return 'https://wordpress.example/wp-content/plugins/discussionbridge/' . $path; }
-function plugin_dir_path(string $plugin): string { unset($plugin); return dirname(__DIR__) . '/'; }
-function wp_enqueue_style(string $handle, ...$args): void { $GLOBALS['dbt']['styles'][] = $handle; }
-function wp_enqueue_script(string $handle, ...$args): void { $GLOBALS['dbt']['scripts'][] = $handle; }
-function wp_register_script(string $handle, ...$args): void { $GLOBALS['dbt']['scripts'][] = $handle; }
-function wp_add_inline_script(string $handle, string $data, string $position = 'after'): bool { $GLOBALS['dbt']['inline'][$handle][] = [$position, $data]; return true; }
-function register_block_type(string $path, array $args): void { $GLOBALS['dbt']['block'] = [$path, $args]; }
-function is_admin(): bool { return $GLOBALS['dbt']['is_admin']; }
-function is_singular(array|string $types = ''): bool { unset($types); return $GLOBALS['dbt']['is_singular']; }
-function get_queried_object_id(): int { return $GLOBALS['dbt']['queried_id']; }
-function in_the_loop(): bool { return $GLOBALS['dbt']['in_loop']; }
-function is_main_query(): bool { return $GLOBALS['dbt']['main_query']; }
-function add_action(string $hook, callable|array $callback, int $priority = 10, int $args = 1): void { $GLOBALS['dbt']['actions'][] = [$hook, $callback, $priority, $args]; }
-function add_filter(string $hook, callable|array $callback, int $priority = 10, int $args = 1): void { $GLOBALS['dbt']['filters'][] = [$hook, $callback, $priority, $args]; }
-function add_shortcode(string $tag, callable|array $callback): void { $GLOBALS['dbt']['shortcodes'][$tag] = $callback; }
-function get_post_types(array $args = [], string $output = 'names'): array { unset($args, $output); return $GLOBALS['dbt']['post_types'] ?? ['post' => 'post', 'page' => 'page', 'attachment' => 'attachment']; }
-function get_post_type_object(string $name): object { return (object) ['labels' => (object) ['singular_name' => ucfirst($name)]]; }
-function get_object_taxonomies(string $post_type, string $output = 'names'): array { unset($output); return $post_type === 'post' ? ['category', 'post_tag'] : []; }
-function get_terms(array $args): array|WP_Error { $callback = $GLOBALS['dbt']['get_terms_callback']; return is_callable($callback) ? $callback($args) : array_values(array_filter($GLOBALS['dbt']['terms'], fn(WP_Term $term): bool => $term->taxonomy === ($args['taxonomy'] ?? ''))); }
-function wp_set_object_terms(int $post_id, array $term_ids, string $taxonomy, bool $append = false): array|WP_Error { unset($append); $GLOBALS['dbt']['object_terms'][$post_id][$taxonomy] = $term_ids; return $term_ids; }
-function wp_get_object_terms(int $post_id, string $taxonomy, array $args = []): array|WP_Error { unset($args); return $GLOBALS['dbt']['object_terms'][$post_id][$taxonomy] ?? []; }
+function esc_html(string $value): string { return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
+function esc_attr(string $value): string { return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
+function esc_url(string $value): string { return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
+function add_filter(string $hook, callable|array $callback, int $priority = 10, int $args = 1): void { $GLOBALS['native']['hooks'][] = [$hook, $callback, $priority, $args]; }
+function add_action(string $hook, callable|array $callback, int $priority = 10, int $args = 1): void { add_filter($hook, $callback, $priority, $args); }
 
-require_once __DIR__ . '/../src/Settings.php';
-require_once __DIR__ . '/../src/Client.php';
-require_once __DIR__ . '/../src/WpDiscourseGuard.php';
-require_once __DIR__ . '/../src/PublishedContent.php';
-require_once __DIR__ . '/../src/SourceAuthors.php';
+require_once __DIR__ . '/native-preparation-api.php';
+require_once __DIR__ . '/../src/NativeLock.php';
+require_once __DIR__ . '/../src/NativeWriter.php';
+require_once __DIR__ . '/../src/ProtectedJournal.php';
+require_once __DIR__ . '/../src/NativeContent.php';
+require_once __DIR__ . '/../src/NativeSourceSnapshot.php';
+require_once __DIR__ . '/../src/NativeDeletion.php';
 require_once __DIR__ . '/../src/TableOfContents.php';
-require_once __DIR__ . '/../src/Publisher.php';
-require_once __DIR__ . '/../src/Materializer.php';
-require_once __DIR__ . '/../src/PlatformCatalog.php';
-require_once __DIR__ . '/../src/ForumPublisher.php';
-require_once __DIR__ . '/../src/Presentation.php';
-require_once __DIR__ . '/../src/Admin.php';
-require_once __DIR__ . '/../src/Plugin.php';
-
-dbt_reset();
+native_reset();

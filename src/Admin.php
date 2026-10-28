@@ -4,380 +4,188 @@ declare(strict_types=1);
 
 namespace DiscussionBridge\WordPress;
 
+/** Existing native capability/nonce settings and per-source control surface. */
 final class Admin
 {
-    public static function enqueue_assets(string $hook_suffix): void
+    public static function register_menu(): void { add_options_page('DiscussionBridge', 'DiscussionBridge', 'manage_options', 'discussionbridge', [self::class, 'render']); }
+
+    public static function enqueue_assets(string $hook): void
     {
-        if ($hook_suffix !== 'settings_page_discussionbridge' || !current_user_can('manage_options')) {
+        if (!current_user_can('manage_options')) return;
+        if ($hook === 'post.php') {
+            wp_enqueue_script('discussionbridge-source-retry', plugins_url('resources/js/cms-source-retry.js', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION, true);
             return;
         }
-        wp_enqueue_script(
-            'discussionbridge-admin',
-            plugins_url('assets/discussionbridge-admin.js', DISCUSSIONBRIDGE_WORDPRESS_FILE),
-            ['jquery', 'jquery-ui-autocomplete'],
-            DISCUSSIONBRIDGE_WORDPRESS_VERSION,
-            true
-        );
-        wp_enqueue_style(
-            'discussionbridge-admin',
-            plugins_url('assets/discussionbridge-admin.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
-            [],
-            DISCUSSIONBRIDGE_WORDPRESS_VERSION
-        );
-        wp_localize_script('discussionbridge-admin', 'DiscussionBridgeAdmin', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('discussionbridge_search_authors'),
-        ]);
+        if ($hook !== 'settings_page_discussionbridge') return;
+        wp_enqueue_script('discussionbridge-admin', plugins_url('assets/discussionbridge-admin.js', DISCUSSIONBRIDGE_WORDPRESS_FILE), ['jquery', 'jquery-ui-autocomplete'], DISCUSSIONBRIDGE_WORDPRESS_VERSION, true);
+        wp_enqueue_style('discussionbridge-admin', plugins_url('assets/discussionbridge-admin.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION);
+        wp_localize_script('discussionbridge-admin', 'DiscussionBridgeAdmin', ['ajaxUrl' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('discussionbridge_search_authors')]);
+        wp_enqueue_script('discussionbridge-catalog', plugins_url('resources/js/cms-catalog-refresh.js', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION, true);
+        wp_add_inline_script('discussionbridge-catalog', 'window.DiscussionBridgeCatalog=' . wp_json_encode(['url' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('discussionbridge_refresh_catalogs')]), 'before');
     }
 
     public static function search_authors(): void
     {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('You do not have permission to search users.', 'discussionbridge')], 403);
-        }
+        if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'Native administrator permission is required.'], 403);
         check_ajax_referer('discussionbridge_search_authors', 'nonce');
-        $term = isset($_GET['term']) ? sanitize_text_field(wp_unslash($_GET['term'])) : '';
-        $args = [
-            'capability' => 'publish_posts',
-            'number' => 20,
-            'orderby' => 'display_name',
-            'order' => 'ASC',
-        ];
-        if ($term !== '') {
-            $args['search'] = '*' . $term . '*';
-            $args['search_columns'] = ['user_login', 'display_name'];
-        }
-        $results = [];
-        foreach (get_users($args) as $user) {
-            if (!$user instanceof \WP_User || !user_can($user, 'publish_posts')) {
-                continue;
-            }
-            $results[] = [
-                'label' => sprintf('%s (@%s)', $user->display_name, $user->user_login),
-                'value' => $user->user_login,
-            ];
-        }
-        wp_send_json($results);
-    }
-
-    public static function register_menu(): void
-    {
-        add_options_page(
-            'DiscussionBridge',
-            'DiscussionBridge',
-            'manage_options',
-            'discussionbridge',
-            [self::class, 'render']
-        );
-    }
-
-    public static function operator_result_label(string $outcome, string $reason): string
-    {
-        return match ($outcome) {
-            'materialized' => __('WordPress post created', 'discussionbridge'),
-            'updated' => __('WordPress post updated', 'discussionbridge'),
-            'created' => __('Discourse topic created', 'discussionbridge'),
-            'resolved' => $reason === 'existing_bridge_record'
-                ? __('Existing Discourse topic found', 'discussionbridge')
-                : __('Discourse topic found', 'discussionbridge'),
-            'failed' => __('Delivery failed', 'discussionbridge'),
-            default => $outcome === ''
-                ? __('No result yet', 'discussionbridge')
-                : ucwords(str_replace('_', ' ', $outcome)),
-        };
-    }
-
-    public static function sync_publications(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to synchronize DiscussionBridge publications.', 'discussionbridge'));
-        }
-        check_admin_referer('discussionbridge_sync_publications');
-        $failure_codes = [];
-        $result = Materializer::sync($failure_codes);
-        set_transient('discussionbridge_sync_failures_' . get_current_user_id(), $failure_codes, 300);
-        wp_safe_redirect(add_query_arg(array_map('absint', $result), admin_url('options-general.php?page=discussionbridge')));
-        exit;
-    }
-
-    public static function start_forum_sync(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to synchronize forum publications.', 'discussionbridge'));
-        }
-        check_admin_referer('discussionbridge_start_forum_sync');
-        ForumPublisher::start();
-        wp_safe_redirect(admin_url('options-general.php?page=discussionbridge'));
-        exit;
+        $term = isset($_GET['term']) && is_string($_GET['term']) ? sanitize_text_field(wp_unslash($_GET['term'])) : '';
+        $args = ['capability' => 'publish_posts', 'number' => 20, 'orderby' => 'display_name', 'order' => 'ASC'];
+        if ($term !== '') { $args['search'] = '*' . $term . '*'; $args['search_columns'] = ['user_login', 'display_name']; }
+        $items = [];
+        foreach (get_users($args) as $user) if ($user instanceof \WP_User && user_can($user, 'publish_posts'))
+            $items[] = ['label' => sprintf('%s (@%s)', $user->display_name, $user->user_login), 'value' => $user->user_login];
+        wp_send_json($items);
     }
 
     public static function register_meta_box(): void
     {
-        foreach (Settings::post_types() as $post_type) {
-            add_meta_box(
-                'discussionbridge-publish',
-                'DiscussionBridge',
-                [self::class, 'render_meta_box'],
-                $post_type,
-                'side',
-                'default'
-            );
-        }
+        foreach (Settings::post_types() as $type) add_meta_box('discussionbridge-source', 'DiscussionBridge', [self::class, 'render_meta_box'], $type, 'side');
     }
 
     public static function render_meta_box(\WP_Post $post): void
     {
         wp_nonce_field('discussionbridge_post_' . $post->ID, 'discussionbridge_post_nonce');
-        $enabled = get_post_meta($post->ID, Publisher::ENABLED_META, true) === '1';
-        $stored_comments_mode = (string) get_post_meta($post->ID, Presentation::COMMENTS_MODE_META, true);
-        $comments_mode = $stored_comments_mode === '' ? '' : Settings::sanitize_comments_mode($stored_comments_mode);
-        ?>
-        <label><input type="checkbox" name="discussionbridge_enabled" value="1" <?php checked($enabled); ?>> <?php echo esc_html__('Create or retain this post’s DiscussionBridge record when it is first published.', 'discussionbridge'); ?></label>
-        <p class="description"><?php echo esc_html__('Later edits do not rewrite the Discourse topic. Use the status page for an exact retry.', 'discussionbridge'); ?></p>
-        <p><label for="discussionbridge_comments_mode"><strong><?php echo esc_html__('Discussion mode', 'discussionbridge'); ?></strong></label></p>
-        <select id="discussionbridge_comments_mode" name="discussionbridge_comments_mode">
-            <option value="" <?php selected($comments_mode, ''); ?>><?php echo esc_html__('Use site default', 'discussionbridge'); ?></option>
-            <option value="none" <?php selected($comments_mode, 'none'); ?>><?php echo esc_html__('No discussion', 'discussionbridge'); ?></option>
-            <option value="simple" <?php selected($comments_mode, 'simple'); ?>><?php echo esc_html__('Simple comments', 'discussionbridge'); ?></option>
-            <option value="full" <?php selected($comments_mode, 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
-            <option value="interactive" <?php selected($comments_mode, 'interactive'); ?>><?php echo esc_html__('DiscussionBridge Interactive', 'discussionbridge'); ?></option>
-        </select>
-        <?php
+        if (get_post_meta($post->ID, Materializer::IMPORTED_META, true) !== '1') {
+            echo '<label><input type="checkbox" name="discussionbridge_enabled" value="1" ' . checked(get_post_meta($post->ID, Publisher::ENABLED_META, true), '1', false) . '> Publish this post and its later published edits through DiscussionBridge.</label>';
+        }
+        echo '<p>Discussion mode</p><select name="discussionbridge_comments_mode"><option value="">Use site default</option>';
+        foreach (['none', 'simple', 'full', 'interactive'] as $mode) echo '<option value="' . esc_attr($mode) . '" ' . selected(get_post_meta($post->ID, Presentation::COMMENTS_MODE_META, true), $mode, false) . '>' . esc_html($mode) . '</option>';
+        echo '</select>';
+        if (get_post_meta($post->ID, Materializer::IMPORTED_META, true) === '1') {
+            echo '<p>Math and diagram renderer</p><select name="discussionbridge_rich_content_post">';
+            foreach (['' => 'Preserve current choice', 'site' => 'Use site selection', 'enabled' => 'Enabled', 'disabled' => 'Disabled; retain source'] as $value => $label)
+                echo '<option value="' . esc_attr($value) . '" ' . selected(get_post_meta($post->ID, Presentation::RICH_CONTENT_META, true), $value, false) . '>' . esc_html($label) . '</option>';
+            echo '</select>';
+        }
+        echo '<p>' . esc_html((string) get_post_meta($post->ID, '_discussionbridge_status', true)) . '</p>';
+        self::render_retry_control($post);
     }
 
-    public static function save_meta_box(int $post_id, \WP_Post $post): void
+    private static function render_retry_control(\WP_Post $post): void
     {
-        if (!in_array($post->post_type, Settings::post_types(), true)
-            || wp_is_post_revision($post_id)
-            || wp_is_post_autosave($post_id)
-            || !isset($_POST['discussionbridge_post_nonce'])
-            || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['discussionbridge_post_nonce'])), 'discussionbridge_post_' . $post_id)
-            || !current_user_can('edit_post', $post_id)) {
-            return;
+        if (!current_user_can('manage_options') || !current_user_can('edit_post', $post->ID)
+            || is_array(get_post_meta($post->ID, CmsPresentation::META, true))
+            || $post->post_status !== 'publish' || !in_array($post->post_type, Settings::post_types(), true)
+            || get_post_meta($post->ID, Publisher::ENABLED_META, true) !== '1') return;
+        $state = (new CmsJournal($post->ID))->read();
+        if (!$state instanceof \stdClass || !CmsMutation::invalid_field_rejected($state)
+            || $state->scope !== CmsSourcePublisher::scope($post->ID) || $state->accepted !== null
+            || isset($state->withdrawal) || isset($state->source_move) || isset($state->lifecycle_attention)) return;
+        echo '<p>The source request was refused. Correct its cause before retrying; current source and ownership will be checked again.</p>';
+        echo '<button type="button" class="button" data-discussionbridge-retry data-post-id="' . esc_attr((string) $post->ID)
+            . '" data-request-identity="' . esc_attr(hash('sha256', $state->pending->identity)) . '" data-nonce="' . esc_attr(wp_create_nonce('discussionbridge_retry_' . $post->ID))
+            . '" data-action-url="' . esc_url(admin_url('admin-post.php')) . '">Retry refused source request</button>';
+    }
+
+    public static function save_meta_box(int $id, \WP_Post $post): void
+    {
+        if (wp_is_post_revision($id) || wp_is_post_autosave($id) || !current_user_can('edit_post', $id)
+            || !isset($_POST['discussionbridge_post_nonce']) || !is_string($_POST['discussionbridge_post_nonce'])
+            || !wp_verify_nonce(wp_unslash($_POST['discussionbridge_post_nonce']), 'discussionbridge_post_' . $id)) return;
+        $nonce = wp_unslash($_POST['discussionbridge_post_nonce']);
+        if (get_post_meta($id, Materializer::IMPORTED_META, true) !== '1') {
+            $was_enabled = get_post_meta($id, Publisher::ENABLED_META, true) === '1';
+            if (($_POST['discussionbridge_enabled'] ?? null) === '1') {
+                update_post_meta($id, Publisher::ENABLED_META, '1');
+                delete_post_meta($id, CmsSourceRecovery::EXCLUSION_META);
+            }
+            else {
+                if ($was_enabled) {
+                    $fact = CmsSourceRecovery::exclusion_fact($id);
+                    update_post_meta($id, CmsSourceRecovery::EXCLUSION_META, $fact); wp_cache_delete($id, 'post_meta');
+                    if (get_post_meta($id, CmsSourceRecovery::EXCLUSION_META, true) !== $fact) return;
+                }
+                delete_post_meta($id, Publisher::ENABLED_META);
+                if ($was_enabled && get_post_meta($id, Publisher::ENABLED_META, true) !== '1') CmsSourceWithdrawal::capture($id, 'policy_excluded', $post, true, $nonce);
+            }
         }
-        if (isset($_POST['discussionbridge_enabled']) && $_POST['discussionbridge_enabled'] === '1') {
-            update_post_meta($post_id, Publisher::ENABLED_META, '1');
-        } else {
-            delete_post_meta($post_id, Publisher::ENABLED_META);
+        if (isset($_POST['discussionbridge_comments_mode']) && is_string($_POST['discussionbridge_comments_mode'])) {
+            $mode = wp_unslash($_POST['discussionbridge_comments_mode']);
+            if ($mode === '') delete_post_meta($id, Presentation::COMMENTS_MODE_META);
+            elseif (in_array($mode, ['none', 'simple', 'full', 'interactive'], true)) update_post_meta($id, Presentation::COMMENTS_MODE_META, $mode);
         }
-        $comments_mode = isset($_POST['discussionbridge_comments_mode'])
-            ? (string) wp_unslash($_POST['discussionbridge_comments_mode'])
-            : '';
-        if ($comments_mode === '') {
-            delete_post_meta($post_id, Presentation::COMMENTS_MODE_META);
-        } elseif (in_array($comments_mode, ['none', 'simple', 'full', 'interactive', 'fullInteractive'], true)) {
-            update_post_meta($post_id, Presentation::COMMENTS_MODE_META, Settings::sanitize_comments_mode($comments_mode));
-        }
-        if ($post->post_status === 'publish'
-            && get_post_meta($post_id, Publisher::ENABLED_META, true) === '1'
-            && get_post_meta($post_id, '_discussionbridge_status', true) === ''
-            && get_post_meta($post_id, '_discussionbridge_resource_id', true) === '') {
-            Publisher::queue($post_id, false);
+        if (isset($_POST['discussionbridge_rich_content_post']) && is_string($_POST['discussionbridge_rich_content_post'])) {
+            $value = wp_unslash($_POST['discussionbridge_rich_content_post']);
+            if ($value === '') delete_post_meta($id, Presentation::RICH_CONTENT_META);
+            elseif (in_array($value, ['site', 'enabled', 'disabled'], true)) update_post_meta($id, Presentation::RICH_CONTENT_META, $value);
         }
     }
 
     public static function render(): void
     {
-        if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to manage DiscussionBridge.', 'discussionbridge'));
+        if (!current_user_can('manage_options')) return;
+        echo '<div class="wrap"><h1>DiscussionBridge</h1>'; settings_errors();
+        echo '<form method="post" action="options.php">'; settings_fields('discussionbridge');
+        foreach ([Settings::SERVER_URL_OPTION => ['Discourse HTTPS origin', Settings::server_url()], Settings::CONNECTION_ID_OPTION => ['Content Connection', Settings::connection_id()],
+            Settings::LANE_OPTION => ['Publication lane', Settings::lane()], Settings::SERVICE_AUTHOR_OPTION => ['Existing native service author username', Settings::service_author_username()]] as $key => [$label, $value]) {
+            echo '<p><label>' . esc_html($label) . '<br><input class="regular-text" id="' . esc_attr($key === Settings::SERVICE_AUTHOR_OPTION ? 'discussionbridge_service_author' : $key) . '" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '"></label></p>';
         }
-        $post_types = get_post_types(['public' => true], 'objects');
-        $recent = get_posts([
-            'post_type' => Settings::post_types(),
-            'post_status' => 'publish',
-            'posts_per_page' => 50,
-            'meta_key' => '_discussionbridge_status',
-            'orderby' => 'modified',
-            'order' => 'DESC',
-        ]);
-        $sync_result = null;
-        if (isset($_GET['created'], $_GET['updated'], $_GET['unchanged'], $_GET['failed'])) {
-            $sync_result = [
-                'created' => absint($_GET['created']),
-                'updated' => absint($_GET['updated']),
-                'unchanged' => absint($_GET['unchanged']),
-                'failed' => absint($_GET['failed']),
-            ];
+        echo '<p><label>Connection secret<br><input type="password" autocomplete="new-password" name="' . esc_attr(Settings::CONNECTION_SECRET_OPTION) . '" value=""></label> Leave blank to retain protected configuration.</p>';
+        echo '<p>Native post types</p>';
+        foreach (get_post_types(['public' => true], 'names') as $type) if ($type !== 'attachment') echo '<label><input type="checkbox" name="' . esc_attr(Settings::POST_TYPES_OPTION) . '[]" value="' . esc_attr($type) . '" ' . checked(in_array($type, Settings::post_types(), true), true, false) . '> ' . esc_html($type) . '</label> ';
+        echo '<p>Discussion mode</p><select name="' . esc_attr(Settings::COMMENTS_MODE_OPTION) . '">';
+        foreach (['none', 'simple', 'full', 'interactive'] as $mode) echo '<option ' . selected(Settings::comments_mode(), $mode, false) . '>' . esc_html($mode) . '</option>';
+        echo '</select><p>Math and diagram renderer</p><select name="' . esc_attr(Settings::RICH_CONTENT_OPTION) . '">';
+        foreach (['preserve' => 'Preserve current renderer behavior', 'enabled' => 'Enabled', 'disabled' => 'Disabled; retain source'] as $value => $label) echo '<option value="' . esc_attr($value) . '" ' . selected(Settings::rich_content(), $value, false) . '>' . esc_html($label) . '</option>';
+        echo '</select>'; submit_button(); echo '</form>';
+        $status = FromSynchronizer::status();
+        echo '<h2>Publication status</h2><p>' . esc_html($status['status']) . '</p>';
+        if ($status['local_failures'] >= 3 || $status['overdue'] || $status['status'] === 'scheduling_unavailable') {
+            echo '<div class="notice notice-warning inline"><p>Local synchronization needs checking. Publication attention is handled separately in the forum.</p>';
+            if ($status['reason'] !== '') echo '<p>' . esc_html($status['reason']) . '</p>';
+            if ($status['overdue']) echo '<p>The scheduled check is overdue. WordPress needs a working cron invocation.</p>';
+            echo '</div>';
         }
-        $sync_failures = [];
-        if ($sync_result !== null) {
-            $stored_failures = get_transient('discussionbridge_sync_failures_' . get_current_user_id());
-            if (is_array($stored_failures)) {
-                $sync_failures = array_slice(array_filter($stored_failures, 'is_string'), 0, 5);
-            }
-            delete_transient('discussionbridge_sync_failures_' . get_current_user_id());
-        }
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html__('DiscussionBridge', 'discussionbridge'); ?></h1>
-            <p><?php echo esc_html__('One WordPress installation, one independently scoped Content Connection.', 'discussionbridge'); ?></p>
-            <?php settings_errors(); ?>
-            <form method="post" action="options.php">
-                <?php settings_fields('discussionbridge'); ?>
-                <table class="form-table" role="presentation">
-                    <tr>
-                        <th scope="row"><label for="discussionbridge_server_url"><?php echo esc_html__('Receiving Discourse URL', 'discussionbridge'); ?></label></th>
-                        <td><input class="regular-text" type="url" id="discussionbridge_server_url" name="<?php echo esc_attr(Settings::SERVER_URL_OPTION); ?>" value="<?php echo esc_attr(Settings::server_url()); ?>" placeholder="https://forum.example" required><p class="description"><?php echo esc_html__('The Discourse forum running The Bridge—not this WordPress site’s URL.', 'discussionbridge'); ?></p></td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="discussionbridge_comments_mode_default"><?php echo esc_html__('Default discussion mode', 'discussionbridge'); ?></label></th>
-                        <td><select id="discussionbridge_comments_mode_default" name="<?php echo esc_attr(Settings::COMMENTS_MODE_OPTION); ?>">
-                            <option value="none" <?php selected(Settings::comments_mode(), 'none'); ?>><?php echo esc_html__('No discussion', 'discussionbridge'); ?></option>
-                            <option value="simple" <?php selected(Settings::comments_mode(), 'simple'); ?>><?php echo esc_html__('Simple comments', 'discussionbridge'); ?></option>
-                            <option value="full" <?php selected(Settings::comments_mode(), 'full'); ?>><?php echo esc_html__('Standard Discourse comments', 'discussionbridge'); ?></option>
-                            <option value="interactive" <?php selected(Settings::comments_mode(), 'interactive'); ?>><?php echo esc_html__('DiscussionBridge Interactive', 'discussionbridge'); ?></option>
-                        </select><p class="description"><?php echo esc_html__('Individual posts may inherit or override this setting.', 'discussionbridge'); ?></p></td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="discussionbridge_connection_id"><?php echo esc_html__('Connection ID', 'discussionbridge'); ?></label></th>
-                        <td><input class="regular-text" type="text" id="discussionbridge_connection_id" name="<?php echo esc_attr(Settings::CONNECTION_ID_OPTION); ?>" value="<?php echo esc_attr(Settings::connection_id()); ?>" pattern="dbc_[a-f0-9]{24}" required></td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><?php echo esc_html__('Connection secret', 'discussionbridge'); ?></th>
-                        <td>
-                            <?php $secret_source = Settings::connection_secret_source(); ?>
-                            <strong><?php
-                                echo esc_html(match ($secret_source) {
-                                    'server_constant', 'server_file' => __('Available from protected server configuration', 'discussionbridge'),
-                                    'wordpress_encrypted' => __('Stored encrypted by WordPress', 'discussionbridge'),
-                                    default => __('Missing', 'discussionbridge'),
-                                });
-                            ?></strong>
-                            <p><input class="regular-text" type="password" id="discussionbridge_connection_secret" name="<?php echo esc_attr(Settings::CONNECTION_SECRET_OPTION); ?>" value="" autocomplete="new-password" placeholder="<?php echo esc_attr($secret_source === 'missing' ? __('Paste connection secret', 'discussionbridge') : __('Enter only to replace the current secret', 'discussionbridge')); ?>"></p>
-                            <p class="description"><?php echo esc_html__('The secret is never redisplayed. WordPress stores an encrypted, non-autoloaded value using this installation’s authentication salts. A protected server constant or secret file takes precedence when configured.', 'discussionbridge'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="discussionbridge_lane"><?php echo esc_html__('Advanced category route', 'discussionbridge'); ?></label></th>
-                        <td>
-                            <input class="regular-text" type="text" id="discussionbridge_lane" name="<?php echo esc_attr(Settings::LANE_OPTION); ?>" value="<?php echo esc_attr(Settings::lane()); ?>">
-                            <p class="description"><?php echo esc_html__('Optional. Use only when the Discourse connection has a matching advanced route; otherwise leave blank.', 'discussionbridge'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="discussionbridge_service_author"><?php echo esc_html__('From Discourse service author', 'discussionbridge'); ?></label></th>
-                        <td><input class="regular-text" type="text" id="discussionbridge_service_author" name="<?php echo esc_attr(Settings::SERVICE_AUTHOR_OPTION); ?>" value="<?php echo esc_attr(Settings::service_author_username()); ?>" autocomplete="off" role="combobox" aria-autocomplete="list" aria-describedby="discussionbridge_service_author_help" required><p id="discussionbridge_service_author_help" class="description"><?php echo esc_html__('Begin typing to select an existing WordPress user allowed to publish posts. That user locally owns materialized posts; the original Discourse author remains separately visible as source provenance.', 'discussionbridge'); ?></p></td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><?php echo esc_html__('Published post types', 'discussionbridge'); ?></th>
-                        <td>
-                            <?php foreach ($post_types as $post_type) : if ($post_type->name === 'attachment') { continue; } ?>
-                                <label><input type="checkbox" name="<?php echo esc_attr(Settings::POST_TYPES_OPTION); ?>[]" value="<?php echo esc_attr($post_type->name); ?>" <?php checked(in_array($post_type->name, Settings::post_types(), true)); ?>> <?php echo esc_html($post_type->labels->singular_name); ?></label><br>
-                            <?php endforeach; ?>
-                        </td>
-                    </tr>
-                </table>
-                <?php submit_button(); ?>
-            </form>
-
-            <?php $forum_state = ForumPublisher::state(); ?>
-            <h2><?php echo esc_html__('Publish the connected forum into WordPress', 'discussionbridge'); ?></h2>
-            <p><?php echo esc_html__('WordPress reports its public post types and taxonomies to this connection, then processes the forum operator’s category, tag, destination, and presentation rules as a resumable background synchronization.', 'discussionbridge'); ?></p>
-            <p><strong><?php echo esc_html__('Status:', 'discussionbridge'); ?></strong>
-                <code><?php echo esc_html((string) $forum_state['status']); ?></code>
-                <?php echo esc_html(sprintf(
-                    __('%1$d processed · %2$d created · %3$d updated · %4$d unchanged · %5$d held · %6$d failed', 'discussionbridge'),
-                    (int) $forum_state['processed'],
-                    (int) $forum_state['created'],
-                    (int) $forum_state['updated'],
-                    (int) $forum_state['unchanged'],
-                    (int) $forum_state['held'],
-                    (int) $forum_state['failed']
-                )); ?>
-            </p>
-            <p><?php echo esc_html(sprintf(
-                __('%1$d retry events · %2$d unpublished · %3$d queued topic attention items · %4$d queued revocation attention items', 'discussionbridge'),
-                (int) $forum_state['retry_events'],
-                (int) $forum_state['unpublished'],
-                count($forum_state['topic_failures']),
-                count($forum_state['revocation_failures'])
-            )); ?></p>
-            <?php if ($forum_state['failure_codes'] !== []) : ?>
-                <p><?php echo esc_html__('Attention codes:', 'discussionbridge'); ?>
-                    <?php foreach ($forum_state['failure_codes'] as $code) : ?><code><?php echo esc_html((string) $code); ?></code> <?php endforeach; ?>
-                </p>
-            <?php endif; ?>
-            <?php if ($forum_state['topic_failures'] !== [] || $forum_state['revocation_failures'] !== []) : ?>
-                <ul>
-                    <?php foreach (array_slice($forum_state['topic_failures'], 0, 10) as $failure) : ?>
-                        <li><?php echo esc_html(sprintf(__('Topic %1$d: %2$s', 'discussionbridge'), (int) ($failure['topic_id'] ?? 0), (string) ($failure['code'] ?? 'attention'))); ?></li>
-                    <?php endforeach; ?>
-                    <?php foreach (array_slice($forum_state['revocation_failures'], 0, 10) as $failure) : ?>
-                        <li><?php echo esc_html(sprintf(__('Revocation %1$s: %2$s', 'discussionbridge'), (string) ($failure['resource_id'] ?? ''), (string) ($failure['code'] ?? 'attention'))); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
-            <?php if ($forum_state['status'] === 'awaiting_mapping') : ?>
-                <div class="notice notice-warning inline"><p><?php echo esc_html__('WordPress reported its current platform structure. Complete the destination mapping and publication preview in the Discourse connection, then start synchronization again.', 'discussionbridge'); ?></p></div>
-            <?php endif; ?>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="discussionbridge_start_forum_sync">
-                <?php wp_nonce_field('discussionbridge_start_forum_sync'); ?>
-                <?php submit_button(__('Refresh platform setup and start or restart forum synchronization', 'discussionbridge'), 'primary', 'submit', false); ?>
-            </form>
-
-            <h2><?php echo esc_html__('Published-content delivery', 'discussionbridge'); ?></h2>
-            <p><?php echo esc_html__('Materialize authorized From Discourse publications as native WordPress posts, then update them only when the exact Discourse source revision changes.', 'discussionbridge'); ?></p>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="discussionbridge_sync_publications">
-                <?php wp_nonce_field('discussionbridge_sync_publications'); ?>
-                <?php submit_button(__('Synchronize publications', 'discussionbridge'), 'secondary', 'submit', false); ?>
-            </form>
-            <?php if ($sync_result !== null) : ?>
-                <div class="notice <?php echo $sync_result['failed'] > 0 ? 'notice-error' : 'notice-success'; ?> inline"><p><?php
-                    echo esc_html(sprintf(
-                        __('Synchronization complete: %1$d posts created, %2$d updated, %3$d already current, %4$d failed.', 'discussionbridge'),
-                        $sync_result['created'],
-                        $sync_result['updated'],
-                        $sync_result['unchanged'],
-                        $sync_result['failed']
-                    ));
-                ?></p></div>
-                <?php if ($sync_failures !== []) : ?>
-                    <div class="notice notice-error inline"><p><?php echo esc_html__('Failure reason codes:', 'discussionbridge'); ?>
-                        <?php foreach ($sync_failures as $failure_code) : ?><code><?php echo esc_html($failure_code); ?></code> <?php endforeach; ?>
-                    </p></div>
-                <?php endif; ?>
-            <?php endif; ?>
-            <p><code>[discussionbridge_record resource_id="…"]</code> <?php echo esc_html__('renders an authorized From Discourse record.', 'discussionbridge'); ?></p>
-            <table class="widefat striped">
-                <thead><tr><th><?php echo esc_html__('Post', 'discussionbridge'); ?></th><th><?php echo esc_html__('Status', 'discussionbridge'); ?></th><th><?php echo esc_html__('Resource', 'discussionbridge'); ?></th><th><?php echo esc_html__('Topic', 'discussionbridge'); ?></th><th><?php echo esc_html__('Last result', 'discussionbridge'); ?></th><th></th></tr></thead>
-                <tbody>
-                <?php if (!$recent) : ?>
-                    <tr><td colspan="6"><?php echo esc_html__('No DiscussionBridge deliveries yet.', 'discussionbridge'); ?></td></tr>
-                <?php endif; ?>
-                <?php foreach ($recent as $post) : ?>
-                    <tr>
-                        <td><a href="<?php echo esc_url(get_edit_post_link($post)); ?>"><?php echo esc_html(get_the_title($post)); ?></a></td>
-                        <td><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_status', true)); ?></td>
-                        <td><code><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_resource_id', true)); ?></code></td>
-                        <td><?php $topic_url = (string) get_post_meta($post->ID, '_discussionbridge_topic_url', true); ?><?php if ($topic_url !== '') : ?><a href="<?php echo esc_url($topic_url); ?>"><?php echo esc_html((string) get_post_meta($post->ID, '_discussionbridge_topic_id', true)); ?></a><?php endif; ?></td>
-                        <td><?php
-                            $last_outcome = (string) get_post_meta($post->ID, '_discussionbridge_last_outcome', true);
-                            $last_reason = (string) get_post_meta($post->ID, '_discussionbridge_last_reason', true);
-                            ?><strong><?php echo esc_html(self::operator_result_label($last_outcome, $last_reason)); ?></strong><?php
-                            if ($last_outcome !== '' || $last_reason !== '') :
-                            ?><details><summary><?php echo esc_html__('Technical details', 'discussionbridge'); ?></summary><code><?php echo esc_html($last_outcome); ?><?php if ($last_reason !== '') : ?> / <?php echo esc_html($last_reason); ?><?php endif; ?></code></details><?php
-                            endif;
-                        ?></td>
-                        <td><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="discussionbridge_retry"><input type="hidden" name="post_id" value="<?php echo (int) $post->ID; ?>"><?php wp_nonce_field('discussionbridge_retry_' . $post->ID); ?><?php submit_button(__('Retry', 'discussionbridge'), 'secondary small', 'submit', false); ?></form></td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php
+        foreach (['last_attempt' => 'Last local check', 'last_success' => 'Last successful check', 'next_due' => 'Next scheduled check'] as $key => $label)
+            echo '<p>' . esc_html($label) . ': ' . esc_html(is_int($status[$key]) ? gmdate('Y-m-d H:i:s \\U\\T\\C', $status[$key]) : 'Not recorded') . '</p>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="discussionbridge_retry_synchronization">';
+        wp_nonce_field('discussionbridge_retry_synchronization');
+        echo '<button class="button" type="submit">Retry synchronization</button><p>This wakes local polling. It does not retry held publications or reset their attempts.</p></form>';
+        if ($status['attention_count'] > 0) echo '<p>' . esc_html((string) $status['attention_count']) . ' retained jobs need native reconciliation. Continuing intake does not retry them.</p>';
+        if ($status['attention_unknown_count'] > 0) echo '<p>' . esc_html((string) $status['attention_unknown_count']) . ' retained jobs await current forum status. Their stored history alone is not current attention.</p>';
+        echo '<p>Native publication retry requires its current reconciliation mechanism. No retry cycle is created by this page.</p>';
+        echo '<h2>Available native authors and taxonomy</h2><button class="button" type="button" data-discussionbridge-catalog="authors">Refresh authors</button> <button class="button" type="button" data-discussionbridge-catalog="taxonomy">Refresh taxonomy</button><p id="discussionbridge-catalog-status" role="status">Catalog refresh updates available choices without changing policy or publication selections.</p></div>';
     }
 
     public static function retry(): void
     {
-        if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to retry DiscussionBridge delivery.', 'discussionbridge'));
-        }
-        $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
-        check_admin_referer('discussionbridge_retry_' . $post_id);
-        Publisher::queue($post_id, true);
-        wp_safe_redirect(admin_url('options-general.php?page=discussionbridge'));
-        exit;
+        $raw_id = $_POST['post_id'] ?? null;
+        $id = is_string($raw_id) && preg_match('/\A[1-9][0-9]{0,18}\z/D', $raw_id) === 1 && (string) (int) $raw_id === $raw_id ? (int) $raw_id : 0;
+        $identity = $_POST['request_identity'] ?? null;
+        $nonce = $_POST['_wpnonce'] ?? null;
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || $id <= 0 || !is_string($identity)
+            || preg_match('/\A[a-f0-9]{64}\z/D', $identity) !== 1 || !is_string($nonce)
+            || !current_user_can('manage_options') || !current_user_can('edit_post', $id)
+            || is_array(get_post_meta($id, CmsPresentation::META, true))) wp_die('Current native reconciliation is required.');
+        check_admin_referer('discussionbridge_retry_' . $id);
+        $actor = get_current_user_id(); $nonce = wp_unslash($nonce);
+        $result = FromSynchronizer::serialized(function (callable $physical) use ($id, $identity, $actor, $nonce): mixed {
+            $guard = fn(): bool => $physical() && get_current_user_id() === $actor && current_user_can('manage_options')
+                && current_user_can('edit_post', $id) && wp_verify_nonce($nonce, 'discussionbridge_retry_' . $id)
+                && !is_array(get_post_meta($id, CmsPresentation::META, true));
+            $state = (new CmsJournal($id))->read();
+            if (!$state instanceof \stdClass || !is_string($state->pending->identity ?? null)
+                || !hash_equals(hash('sha256', $state->pending->identity), $identity)) {
+                return new \WP_Error('discussionbridge_cms_retry_refusal_changed', 'Current native reconciliation is required.');
+            }
+            // The canonical identity contains the private request. Only its
+            // digest crosses the form; the exact retained tree stays protected.
+            $authorized = CmsSourcePublisher::authorize_retry($id, $state->pending->identity, $actor, $guard);
+            if ($authorized !== true) return $authorized;
+            if (!$guard()) return new \WP_Error('discussionbridge_cms_retry_authority_changed', 'Current native reconciliation is required.');
+            Publisher::queue($id, true);
+            return true;
+        });
+        if ($result !== true) wp_die('Current native reconciliation is required.');
+        wp_safe_redirect(admin_url('options-general.php?page=discussionbridge')); exit;
+    }
+
+    public static function retry_synchronization(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !current_user_can('manage_options')) wp_die('Native administrator permission is required.');
+        check_admin_referer('discussionbridge_retry_synchronization');
+        $result = FromSynchronizer::retry_synchronization();
+        if (is_wp_error($result)) wp_die('Local synchronization could not be queued. Check the current connection and scheduler status.');
+        wp_safe_redirect(admin_url('options-general.php?page=discussionbridge')); exit;
     }
 }

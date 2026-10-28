@@ -1,0 +1,96 @@
+{
+  "format": 1,
+  "purpose": "Exact native API source fixtures; no installed-native qualification",
+  "members": [
+    {
+      "path": "class-wp-token-map.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/class-wp-token-map.php",
+      "bytes": 28430,
+      "sha256": "e5b36bfadf3827fd4b50b20565c44a6c8ae333d482e14c4df8f579852aa605b6"
+    },
+    {
+      "path": "html5-named-character-references.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/html-api/html5-named-character-references.php",
+      "bytes": 80163,
+      "sha256": "2a3941baab9845abd796d5243dee4e2e4b6824c2bc6a4b9b9ebf8a71604275ec"
+    },
+    {
+      "path": "class-wp-html-attribute-token.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/html-api/class-wp-html-attribute-token.php",
+      "bytes": 2775,
+      "sha256": "9ee738c4131b2bbc3d2e7bfc2d7c0de361432aaa3c7ebf415b152263c8a6c773"
+    },
+    {
+      "path": "class-wp-html-text-replacement.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/html-api/class-wp-html-text-replacement.php",
+      "bytes": 1394,
+      "sha256": "e9f6259e8365b53631b6002e9b44dc63e76d9bf976e5e4dbd517f10989df830e"
+    },
+    {
+      "path": "class-wp-html-span.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/html-api/class-wp-html-span.php",
+      "bytes": 1091,
+      "sha256": "0e7319a71b2041135e2b1e228013024efe0a2b20e25ff6d945b6b4eca42f6288"
+    },
+    {
+      "path": "class-wp-html-decoder.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/html-api/class-wp-html-decoder.php",
+      "bytes": 16554,
+      "sha256": "0a02470878b912298a89f564478e1b58ebf9b6dbc2f2472e3543ac1bb8e9f9c6"
+    },
+    {
+      "path": "class-wp-html-tag-processor.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/html-api/class-wp-html-tag-processor.php",
+      "bytes": 117960,
+      "sha256": "077d107df410e0f57a4c93607c2c706953a22b10edad62072de125dcb8b1991f"
+    },
+    {
+      "path": "Exception.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/Requests/src/Exception.php",
+      "bytes": 1114,
+      "sha256": "442a7f6f0c2f8b7b06149dc5f0aeba4eef946f84b7f2ad8907bb621d7d281066"
+    },
+    {
+      "path": "InvalidArgument.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/Requests/src/Exception/InvalidArgument.php",
+      "bytes": 1106,
+      "sha256": "e07fece0cd8cb70aaacb9f6aea251041cd5706a711122bf947c24242d780da3b"
+    },
+    {
+      "path": "InputValidator.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/Requests/src/Utility/InputValidator.php",
+      "bytes": 2512,
+      "sha256": "ddbe22b3f5ed77f3dd522cac31404298cee44a61b9acc30d449c1edd0577c4e1"
+    },
+    {
+      "path": "Ipv6.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/Requests/src/Ipv6.php",
+      "bytes": 5639,
+      "sha256": "65c4713e71e21b36109fc8d50aceaac68dfc1e7abbad72e96dccb69fb82c5725"
+    },
+    {
+      "path": "Port.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/Requests/src/Port.php",
+      "bytes": 1505,
+      "sha256": "eab02dc614d84eb8e874ec743d1ede48cbac7df8f7841b664f6e97995e8d883c"
+    },
+    {
+      "path": "Iri.php",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/wp-includes/Requests/src/Iri.php",
+      "bytes": 29622,
+      "sha256": "383118241ff75960fe0b4d255218a152a50d054c0eaa958fab201fcb4926ffaf"
+    },
+    {
+      "path": "license.txt",
+      "source": "https://raw.githubusercontent.com/WordPress/WordPress/6.6/license.txt",
+      "bytes": 19915,
+      "sha256": "acfc9dd833df7993614e4f58cf5d1573cb9e79b79fc80c2a75f8f104dde0841a"
+    },
+    {
+      "path": "REQUESTS-LICENSE.txt",
+      "source": "https://raw.githubusercontent.com/WordPress/Requests/v2.0.11/LICENSE",
+      "bytes": 2359,
+      "sha256": "c08c66f8037c23f20614b58c0cbab6bbacef833dfa9c6a3a00ad3dc3344c2040"
+    }
+  ]
+}

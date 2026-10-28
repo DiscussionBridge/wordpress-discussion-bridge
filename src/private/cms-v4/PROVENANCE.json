@@ -1,0 +1,22 @@
+{
+  "candidate_id": "discussionbridge-v4-core-20261025-r6",
+  "implementation_version": "0.4.0-alpha.1",
+  "wire_version": "v4",
+  "release_version": null,
+  "status": "implementation_candidate_not_frozen_not_reviewed",
+  "source": "codex crap/v4/adapter-contract",
+  "normative_sha256": "df31c5d2fc387a8b12b388438450eccd97966de34c82b1bf417634b21a36b495",
+  "members": [
+    {
+      "path": "CmsCodec.php",
+      "bytes": 51502,
+      "sha256": "6eece074e1268d2d90890afd0215da80c06c23961b497a4df190f7876af0fc19"
+    },
+    {
+      "path": "cms-schema.json",
+      "bytes": 115670,
+      "sha256": "8563a9b1346e3bf82635bd65a46bb1e25415a1003d7432f8fcb8c1c6e4f03c14"
+    }
+  ],
+  "limitation": "Byte-copy SDK/source identity only; no receiver authority, installed-native proof, formal review, release or deployment qualification."
+}

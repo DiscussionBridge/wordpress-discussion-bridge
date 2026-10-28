@@ -14,7 +14,7 @@ final class Settings
     public const POST_TYPES_OPTION = 'discussionbridge_post_types';
     public const COMMENTS_MODE_OPTION = 'discussionbridge_comments_mode';
     public const SERVICE_AUTHOR_OPTION = 'discussionbridge_service_author';
-
+    public const RICH_CONTENT_OPTION = 'discussionbridge_rich_content';
     public static function register(): void
     {
         register_setting('discussionbridge', self::SERVER_URL_OPTION, [
@@ -53,6 +53,21 @@ final class Settings
             'sanitize_callback' => [self::class, 'sanitize_service_author'],
             'default' => '',
         ]);
+        register_setting('discussionbridge', self::RICH_CONTENT_OPTION, [
+            'type' => 'string',
+            'sanitize_callback' => [self::class, 'sanitize_rich_content'],
+            'default' => 'preserve',
+        ]);
+    }
+
+    public static function sanitize_rich_content(mixed $value): string
+    {
+        return in_array($value, ['preserve', 'enabled', 'disabled'], true) ? $value : 'preserve';
+    }
+
+    public static function rich_content(): string
+    {
+        return self::sanitize_rich_content(get_option(self::RICH_CONTENT_OPTION, 'preserve'));
     }
 
     public static function server_url(): string
@@ -92,6 +107,35 @@ final class Settings
             return self::connection_secret() !== '' ? 'server_file' : 'missing';
         }
         return self::connection_secret() !== '' ? 'wordpress_encrypted' : 'missing';
+    }
+
+    /** Receiver text is never a trusted diagnostic or a credential display channel. */
+    public static function diagnostic_reason(string $reason): string
+    {
+        if ($reason === '') {
+            return '';
+        }
+        if (strlen($reason) > 2048) {
+            return 'receiver_reason_rejected';
+        }
+        for ($pass = 0; $pass < 3; $pass++) {
+            $decoded = html_entity_decode(rawurldecode($reason), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if ($decoded === $reason) {
+                break;
+            }
+            $reason = $decoded;
+        }
+        $secret = self::connection_secret();
+        if ($secret !== '') {
+            $reason = str_ireplace([$secret, base64_encode($secret), rtrim(strtr(base64_encode($secret), '+/', '-_'), '=')],
+                'credential_redacted', $reason);
+        }
+        if (strlen($reason) > 128 || preg_match('/\A[a-zA-Z0-9_-]+\z/D', $reason) !== 1) {
+            return 'receiver_reason_rejected';
+        }
+        $reason = sanitize_key($reason);
+        // Recheck after normalization so a historical mixed-case diagnostic cannot disclose a key.
+        return $secret === '' ? $reason : str_ireplace(sanitize_key($secret), 'credential_redacted', $reason);
     }
 
     private static function secret_from_file(string $path): string
@@ -157,9 +201,10 @@ final class Settings
             && strlen(self::connection_secret()) >= 32;
     }
 
-    public static function topic_url_matches(string $value, int $topic_id): bool
+    public static function topic_url_matches(string $value, int|string $topic_id): bool
     {
-        if ($topic_id <= 0) {
+        $identity = (string) $topic_id;
+        if (preg_match('/\A[1-9][0-9]{0,18}\z/D', $identity) !== 1 || strlen($identity) === 19 && strcmp($identity, '9223372036854775807') > 0) {
             return false;
         }
         $parts = wp_parse_url($value);
@@ -172,10 +217,29 @@ final class Settings
             || !empty($parts['query']) || !empty($parts['fragment'])) {
             return false;
         }
-        if (preg_match('#^/t/(?:[^/]+/)?([1-9][0-9]*)(?:/[1-9][0-9]*)?/?$#', (string) ($parts['path'] ?? ''), $matches) !== 1) {
+        $path = (string) ($parts['path'] ?? '');
+        if (!self::valid_url_path($path)
+            || preg_match('#^/t/(?:[^/]+/)?([1-9][0-9]*)(?:/[1-9][0-9]*)?/?$#', $path, $matches) !== 1) {
             return false;
         }
-        return (int) $matches[1] === $topic_id;
+        return $matches[1] === $identity;
+    }
+
+    public static function valid_url_path(string $path): bool
+    {
+        for ($pass = 0; $pass <= 4; $pass++) {
+            if (preg_match('//u', $path) !== 1 || str_contains($path, '//') || str_contains($path, '\\')
+                || preg_match('/[\x00-\x1F\x7F]|%(?:2f|5c)|%(?![0-9a-f]{2})/i', $path)
+                || array_intersect(explode('/', $path), ['.', '..']) !== []) {
+                return false;
+            }
+            $decoded = rawurldecode($path);
+            if ($decoded === $path) {
+                return true;
+            }
+            $path = $decoded;
+        }
+        return false;
     }
 
     public static function sanitize_server_url(mixed $value): string
@@ -198,7 +262,11 @@ final class Settings
             return '';
         }
         $host = strtolower((string) $parts['host']);
-        if (filter_var($host, FILTER_VALIDATE_IP)) {
+        $labels = explode('.', $host);
+        if (filter_var($host, FILTER_VALIDATE_IP) || str_ends_with($host, '.') || strlen($host) > 253
+            || preg_match('/\A(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+)){0,3}\z/i', $host)
+            || array_filter($labels, static fn(string $label): bool => strlen($label) > 63
+                || preg_match('/\A[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\z/i', $label) !== 1) !== []) {
             add_settings_error(self::SERVER_URL_OPTION, 'invalid_server_host', 'DiscussionBridge server URL must use a DNS hostname.');
             return '';
         }
@@ -223,7 +291,7 @@ final class Settings
         if ($submitted === '') {
             return $current;
         }
-        if (str_starts_with($submitted, 'v1:')) {
+        if (str_starts_with($submitted, 'gcm1:')) {
             if (self::decrypt_secret($submitted) !== '') {
                 return $submitted;
             }
@@ -261,25 +329,24 @@ final class Settings
         if ($value === '' || preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $value) === 1) {
             return $value;
         }
-        add_settings_error(
-            self::LANE_OPTION,
-            'invalid_lane',
-            'DiscussionBridge advanced category route is invalid.'
-        );
+        add_settings_error(self::LANE_OPTION, 'invalid_lane', 'DiscussionBridge lane is invalid.');
         return '';
+    }
+
+    public static function valid_forum_name(mixed $value): bool
+    {
+        return is_string($value) && strlen($value) <= 200 && preg_match('/[^\p{Z}\x{FEFF}]/u', $value) === 1
+            && preg_match('//u', $value) === 1 && preg_match('/\p{Cc}/u', $value) === 0;
     }
 
     public static function sanitize_comments_mode(mixed $value): string
     {
         $value = (string) $value;
-        if ($value === 'fullInteractive') {
-            return 'interactive';
-        }
         if (in_array($value, ['none', 'simple', 'full', 'interactive'], true)) {
             return $value;
         }
         add_settings_error(self::COMMENTS_MODE_OPTION, 'invalid_comments_mode', 'DiscussionBridge discussion mode is invalid.');
-        return 'interactive';
+        return 'none';
     }
 
     public static function sanitize_service_author(mixed $value): string
@@ -290,7 +357,10 @@ final class Settings
         }
         $user = get_user_by('login', $username);
         if (!$user instanceof \WP_User || !user_can($user, 'publish_posts')) {
-            add_settings_error(self::SERVICE_AUTHOR_OPTION, 'invalid_service_author', 'DiscussionBridge service author must be an existing WordPress user allowed to publish posts.');
+            // Readiness is also checked by frontend/cron requests without native admin helpers.
+            if (function_exists('add_settings_error')) {
+                add_settings_error(self::SERVICE_AUTHOR_OPTION, 'invalid_service_author', 'DiscussionBridge service author must be an existing WordPress user allowed to publish posts.');
+            }
             return '';
         }
         return $user->user_login;
@@ -344,15 +414,15 @@ final class Settings
         if (!is_string($ciphertext) || strlen($tag) !== 16) {
             return '';
         }
-        return 'v1:' . base64_encode($iv . $tag . $ciphertext);
+        return 'gcm1:' . base64_encode($iv . $tag . $ciphertext);
     }
 
-    private static function decrypt_secret(string $encrypted, int $depth = 0): string
+    private static function decrypt_secret(string $encrypted): string
     {
-        if (!str_starts_with($encrypted, 'v1:') || !function_exists('openssl_decrypt')) {
+        if (!str_starts_with($encrypted, 'gcm1:') || !function_exists('openssl_decrypt')) {
             return '';
         }
-        $payload = base64_decode(substr($encrypted, 3), true);
+        $payload = base64_decode(substr($encrypted, 5), true);
         if (!is_string($payload) || strlen($payload) < 29) {
             return '';
         }
@@ -366,9 +436,6 @@ final class Settings
         );
         if (!is_string($secret)) {
             return '';
-        }
-        if ($depth < 1 && str_starts_with($secret, 'v1:')) {
-            return self::decrypt_secret($secret, $depth + 1);
         }
         return self::validated_secret($secret);
     }

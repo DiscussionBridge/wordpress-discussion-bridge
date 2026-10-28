@@ -27,12 +27,20 @@ jobs:
         run: php tests/run.php
       - name: Validate PHP syntax
         run: find . -path ./.git -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Prove cross-checkout package reproducibility
-        run: python3 scripts/verify-release-reproducibility.py
-      - name: Build release artifact
-        run: python3 scripts/build-release.py
+      - name: Prove cross-checkout V4 package reproducibility
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $comparisonRoot = Join-Path $env:RUNNER_TEMP 'discussionbridge-v4-package-comparison'
+          git worktree add --detach $comparisonRoot $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create the comparison checkout' }
+          $first = & ./scripts/build-release.ps1 -OutputName 'ci-a.zip' | ConvertFrom-Json
+          $second = & (Join-Path $comparisonRoot 'scripts/build-release.ps1') -OutputName 'ci-b.zip' | ConvertFrom-Json
+          if ($first.sha256 -cne $second.sha256) { throw 'V4 package bytes differ between checkouts' }
+          & ./scripts/verify-release.ps1 -Path $first.path
+          & ./scripts/verify-release.ps1 -Path $second.path
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: wordpress-discussion-bridge-${{ github.sha }}
-          path: dist/*.zip
+          path: .artifacts/ci-a.zip
           if-no-files-found: error

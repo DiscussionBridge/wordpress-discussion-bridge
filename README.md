@@ -1,166 +1,53 @@
-# DiscussionBridge for WordPress
+# DiscussionBridge WordPress V4 development
 
-```sh
-git clone https://github.com/DiscussionBridge/wordpress-discussion-bridge.git
-```
+Implementation/package version: `0.4.0-alpha.1`. Wire: V4. This is an unpublished development component for candidate `discussionbridge-v4-core-20261025-r6`; release version is null. It has no release, formal review or installed-native qualification disposition.
 
-This native WordPress plugin connects one WordPress installation to one
-independently scoped Content Connection in the generic DiscussionBridge
-Discourse plugin.
+## Attention recovery and local synchronization (r6)
 
-Current Alpha slice:
+The forum owns explicit individual/selected-bulk attention checks and retry authorization. The adapter probes `attention-recovery-1` before using V4-32–36. Check uses actual owned post/meta/taxonomy revision, complete native resource/topic census, private create/receipt/fence evidence and selected native metadata availability under the shared writer. It never invokes native apply/save/render hooks, repairs content or releases attention. Dynamic Check omits optional public proof; normal new-lease synchronization still performs its required anonymous public verification. Missing/foreign/uncertain native evidence stays blocked. A positively known committed create before a lost receiver acknowledgement retains that exact private native ID; a resource tag alone does not authorize adoption.
 
-- queues delivery only for explicitly opted-in configured post types on their
-  first authoritative transition to published;
-- skips drafts, autosaves, revisions, and public page loads;
-- uses a generated stable site UUID plus WordPress post ID as external identity;
-- performs bounded authenticated create-or-resolve delivery with no redirect or
-  direct-Core fallback;
-- sends the bounded published WordPress body so the Discourse topic contains
-  meaningful source content plus canonical attribution;
-- reports the stable WordPress author identity, display name and local author
-  archive to the receiving connection. The forum operator chooses fixed or
-  mapped Discourse authorship in that connection's Authors tab;
-- stores resource/topic/outcome/retry state in protected post metadata;
-- exposes authorized operator status and retry controls;
-- reports WordPress's current public post types, categories, and tags to its
-  Content Connection, then runs the forum operator's approved category, tag,
-  destination, and presentation rules as a resumable background publication;
-- backfills eligible existing Discourse topics into native WordPress content,
-  retains one stable WordPress identity per forum topic and connection, applies
-  later source or mapping revisions without duplicates, and drafts a native
-  publication when the forum revokes its eligibility;
-- synchronizes authorized Publishing records into genuine native WordPress
-  posts, retaining exact Discourse source revision, author, topic, resource and
-  destination-URL provenance and updating only when that revision advances.
-  Older presentation-only records are never treated as publication authority;
-- provides the native dynamic `DiscussionBridge / From Discourse` block and a
-  compatibility
-  `[discussionbridge_record resource_id="…" comments="interactive"]`
-  shortcode, both rendered server-side with a bounded cache. The block exposes
-  the same discussion-mode choice in the editor;
-- offers `none`, native plugin-free `simple`, standard plugin-free `full`, and DiscussionBridge
-  `Interactive` presentation per published post, with a site default;
-- renders Simple as sanitized native reply cards, five initially with a
-  **Show more comments** disclosure, fetching at most 50 replies in bounded
-  server-side batches before continuing on The Bridge;
-- appends the exact mapped To Discourse discussion to the original published
-  post. `Interactive` uses the shared 800px bounded viewport with internal
-  scrolling; Discourse retains ownership of sessions, replies, composer,
-  moderation, and interaction; and
-- renders a From Discourse first post once in WordPress and, when
-  `Interactive` is selected, presents that same topic's replies below it
-  without duplicating the first post in the frame; and
-- builds a credential-free **On this page** navigation from two or more `h2` or
-  `h3` headings in either WordPress-authored or From Discourse content.
-- enqueues a local rich-content renderer on imported native publications. It
-  renders Discourse Mermaid blocks in strict security mode, renders cooked
-  math and supported `[math]`, `$$...$$`, and inline `$...$` forms, and keeps
-  `.md-table` wrappers usable on narrow screens without a CDN or receiver
-  credential; code examples remain literal.
+Diagnostic reports have their own exact durable pending request, separate from publication pending state. Bounded inspection/recovery pages are retained before cursors advance. Positive successor events are consumed even with unchanged source revision/empty source feed. Old attention jobs and history remain protected; fresh jobs target the exact recovery Work/cycle with V4-36, fresh lease and increasing fence. An empty targeted claim retains/observes nonterminal known Work instead of assuming it disappeared. Publication retries do not transplant old success/lease/count state. Exactly known r5 From journal descriptors migrate with artifact history and unchanged pending bytes; unknown descriptors stay reconciliation-only. Existing To02, To29, preservation behavior and WordPress discussion-mode override are unchanged.
 
-## Reproducible release package
+Local polling is separate from receiver Work attention. Transient read/transport failures continue after60/120/300seconds (300capped), with one deduplicated continuation, current scope/epoch, last attempt/success/next due and truthful local/overdue status. Healthy idle remains300seconds; active continuation60seconds. Native settings provide nonce/capability protected **Retry synchronization**, which only coalesces a local wake. It cannot reset Work attempts, clear protected jobs/history/local limitations or release an attention/cancelled-intent hold. WP-Cron still requires an actual invocation; no host cron, external service or deployment is installed by this change.
 
-Release ZIPs are built from committed Git blobs, not working-tree files. This
-keeps package bytes independent of Windows or Unix line-ending conversion and
-fixes ZIP entry order, timestamps, permissions, and storage method.
+Earlier execution counts and statements that attention mechanisms are unimplemented below are historical. Current batch evidence and exact local-runtime limits are in `planning/v4-attention-recovery-fixes-20261025/WORDPRESS_REPORT.md`; installed WordPress/MySQL/cron/browser qualification remains separate.
 
-```bash
-python3 scripts/build-release.py --treeish HEAD
-python3 scripts/verify-release-reproducibility.py
-```
+The current To receiver can return the strictly typed six-field `content_preservation_unavailable` Error for unavailable rendered-article evidence or actual content/function/data loss. This is HTTP422, permanent, with no automatic retry. It describes a Bridge limitation. The publisher seals the exact response, route/status, request identity and SDK provenance inside the existing pending journal before its terminal marker. Later native save hooks, restart and the existing manual queue cannot retransmit that rejected request. Its complete capture, accepted predecessor and history remain intact. A genuinely changed current native snapshot may enter the ordinary source path: an established binding requires scoped current Record04 equality to the known accepted predecessor before CAS; a new unbound source repeats its actual inventory/collision checks. The rejected tree and capture remain unchanged in rejection history. Identical input after receiver-only repair has no declared readiness action; a timer, version change or status read is not permission to resend it. Malformed responses and uncertain transport retain the existing exact-request recovery distinction. If response storage itself fails, the failure is reported and no automatic retry is scheduled; durable knowledge of the lost response is not claimed. Artifact-mismatched old journals remain reconciliation-only and are never silently retagged.
 
-The first command writes `dist/wordpress-discussion-bridge-<version>.zip` and
-prints its SHA-256 identity. The second builds the same commit from checkouts
-configured with `core.autocrlf=false` and `core.autocrlf=true`; repository
-attributes intentionally normalize tracked text to LF. The check fails unless
-both ZIPs are byte-identical. GitHub Actions runs the same proof alongside the
-adapter tests; release candidates must use that generated artifact rather than
-a ZIP assembled from a working directory.
+This new response is confined to To02/29. It is not a From Failure or Work attention code. The actual WordPress source-URL/public-proof operation remains a plan; this change implements no29 caller.
 
-Configure the Discourse HTTPS origin, `dbc_…` connection ID, optional advanced
-category route, and published post types under **Settings → DiscussionBridge**.
-Prefer these
-protected server constants for credentials:
+The current development plugin wires one typed SDK to native To/From delivery, catalog uploads, source hooks and presentation. Its private pair is pinned in `src/private/cms-v4/PROVENANCE.json`. It has no earlier Bridge transport selector, initialization/adoption path or alternate active schema. Remaining native proof and local issue recovery limits below prevent a complete qualification claim.
 
-```php
-define('DISCUSSIONBRIDGE_SERVER_URL', 'https://forum.example');
-define('DISCUSSIONBRIDGE_CONNECTION_ID', 'dbc_000000000000000000000000');
-define('DISCUSSIONBRIDGE_CONNECTION_SECRET_FILE', '/run/secrets/discussionbridge-wordpress');
-define('DISCUSSIONBRIDGE_SERVICE_AUTHOR', 'discussionbridge');
-```
+`NativeWriter` shares one site-scoped MySQL named lock. `NativeLock` binds the original WordPress database object and physical connection identity. Reconnection loses authority; it never proves a commit or rollback. `ProtectedJournal` encrypts native state with authenticated context and checks persisted bytes under that writer.
 
-The secret file must be outside the webroot and readable only by the PHP-FPM
-application identity. Its path and value are never stored in WordPress options.
-Connection secrets must never be exposed to browsers, themes, public REST
-responses, URLs, content, or logs.
+`NativeContent` preserves the existing block-rendering then native post-KSES order. `NativeSourceSnapshot` captures the original article and its native source article URL together before preparation, then checks the persisted row and URL again. Native originals stay intact. WordPress's HTML Tag Processor and bundled Requests IRI resolver preserve copied relative link/media targets against that captured URL, including supported srcset URL tokens. Complete To byte count/hash cover the entire prepared article before excerpt selection. Plain text and image-only content qualify without a prose/markup eligibility judgment. These are internal observations; exact SDK types govern wire records. The prefix helper does not define a transport cap, generated marker or Read More policy.
 
-For installations without server-file access, an administrator may paste the
-one-time connection secret under **Settings → DiscussionBridge**. The plugin
-encrypts it with that WordPress installation's authentication salts, stores the
-ciphertext in a non-autoloaded option, and never redisplays the secret.
-Server-defined constants and secret files always take precedence. Rotating the
-WordPress authentication salts invalidates an admin-stored credential; paste a
-fresh connection secret afterward.
+New protected pending/accepted/current/history captures retain the original article, captured article URL and native row proof. Existing requests and historical bodies are never retrofitted. The existing content-derived source revision includes complete prepared SHA/count independently of actual nullable source dates: a truthful newly prepared published snapshot can use the normal accepted-predecessor CAS without inventing a native edit/date/UUID. A candidate/config/marker-only change with identical complete snapshot cannot manufacture an edition. Changed pending sources remain query-only. Canonical-only moves retain accepted article bytes/targets and the existing owned Read More boundary; current native source-move guards and missing actual public proof remain in force.
 
-WordPress schedules To Discourse delivery in the background. A post may remain
-**Queued** or **Delivering** briefly while WordPress Cron and the network finish
-the request. Refresh the DiscussionBridge settings page after a short wait. Do
-not select **Retry** while either status is shown; retry only after the delivery
-reports **Attention** or **Failed**.
+Relative CSS references/escaped CSS, rewritten multi-URL native attributes, nested base/srcdoc, backslash references and incomplete native HTML tokens have specific current preparation limits. They retain a private issue before mutation rather than silently change targets or classify a content type as invalid. This does not select a URI/provider/execution policy, replacement renderer, fallback or true-absence algorithm. Registered custom URL attributes still depend on the existing native URI-attribute integration. The exact native APIs and test-only source identities/licenses are recorded in `tests/fixtures/native-wordpress-6.6/README.md` and its manifest.
 
-For whole-forum publication into WordPress, first save the connection settings,
-then select **Refresh platform setup and start or restart forum
-synchronization**. The first run uploads only bounded, non-secret WordPress
-structure: public post types, category and tag identities, publish-capable
-authors, presentation modes, capabilities, and content limits. If the connection has no current destination
-mapping, WordPress pauses at **awaiting_mapping**. Complete the mapping and
-preview in the Discourse connection, then start synchronization again.
+`NativeDeletion` uses the supported `pre_delete_post` veto before WordPress removes metadata. An owned source requires an exclusive held writer and durable capture. Actual native completion is separate from capture and from uncertain protected confirmation. SQL failure, connection loss or failed confirmation retains reconciliation state; it does not authorize recreating a native post. V4 source withdrawal callbacks retain the accepted revision and exact mutation before deletion, and dispatch only after the actual completion event. Unrelated posts and earlier native filter overrides pass through.
 
-The destination mapping also chooses either the configured service author or
-one adapter-reported WordPress author. It chooses whether WordPress supplies
-the initial slug, the initial Discourse title supplies it, or the stable
-Discourse topic ID supplies it. After publication, a mapping change that would
-alter the native post type or URL stops with a migration-required attention
-code instead of silently changing the Bridge identity.
+To withdrawal uses the existing native lifecycle: `transition_post_status` captures published-to-nonpublished; `wp_after_insert_post` captures a saved source that loses configured post-type eligibility; the protected existing per-post checkbox1→0 captures `policy_excluded`. The accepted resource/revision and exact V4-05 mutation are retained before HTTP. Current To connection/direction/lane/origin/ownership checks apply; the separate From publication Policy does not enable or disable To02/05. No automatic resolve/resume follows withdrawal.
 
-WordPress processes one signed source-feed page at a time through WP-Cron. Each
-topic is rechecked against the exact source revision and destination plan,
-written first under a stable local identity, resolved to one connection-owned
-Bridge Record, and acknowledged only after native publication succeeds. A
-transport interruption reuses the pending draft on retry rather than creating a
-second post. The status line exposes processed, created, updated, unchanged,
-held, and failed counts plus bounded non-secret attention codes. Starting a new
-run is safe and idempotent; it does not require topic-by-topic authorization.
+Every To journal is registered durably before writing its protected tree. Existing native `init` performs one positive sealed-option discovery and one indexed native observation under the same site writer, then uses the existing delivery scheduling path. Confirmed captured withdrawals remain discoverable after native deletion, missing Cron scheduling or restart. Current persisted native row/post/meta observations recover failed post-change unpublish/ineligible captures. The existing protected checkbox records a signed local owner fact before removing enable metadata, so recovery never infers deliberate opt-out from missing metadata alone. Recovery observes positively known journals, never absence from a partial scan; direct SQL/external disappearance without a captured native delete leaves reconciliation, not fabricated `source_deleted`. Scope/configuration changes require reconciliation. Progress depends on normal native init/Cron execution; no new polling cadence or publication engine is introduced.
 
-That source-feed scan is the bounded initial backfill or an explicit operator
-restart—not the steady-state polling strategy. After the initial backfill,
-each five-minute poll atomically claims at most 20 changed or withdrawn topics
-from the receiver's durable publication queue. The exact five-minute receiver
-lease is included in the successful Bridge Record acknowledgement. A native
-WordPress failure is reported against that lease; the receiver performs at
-most three automatic attempts before placing the item in central operator
-attention. WordPress never silently drops the item or starts another
-forum-wide crawl to conceal a failed update.
+If accepted editionA has an uncertain pending publicationB when native closure occurs, current scoped Record04(A) and the actual closure permit a separate exact05(A) journal. The original pending02(B), full capture and history remain untouched and unreplayed. Record04(B) cannot promote B; CAS conflict retains reconciliation. Unknown binding creation without acceptedA remains deletion-vetoed. A later confirmed native deletion supplies its own closure fact without changing an already frozen05 request. Native API bypass cannot provide a pre-delete capture, and unrelated plugin side effects/physical concurrency remain installed qualification limits.
 
-The durable OBBBA demo must not rely on reader traffic to trigger WP-Cron. Its
-operator runbook must install and verify a real scheduler that invokes
-`wp-cron.php` (or `wp cron event run --due-now`) on a bounded interval. The
-demo is not operationally accepted while the queue depends only on page loads.
+Run `php tests/run.php` and `php tests/integration.php`. Latest executions: 12 foundation cases and 65 V4 integration cases, no failures, on task-local PHP8.3.12 with the exact r3 pair. Five unchanged Node VM renderer cases retain their prior result; no new browser execution is claimed. These model native API order, transactions, connection failures and HTTP responses, with real PHP/DOM processing and hash-pinned unmodified WordPress6.6 HTML/IRI API source fixtures. KSES/native escaping/storage/HTTP remain modeled. The selected source-time query fixture requires SQLite3 for isolated SQL execution and supplies only MySQL's date primitive through a compatibility function; it does not qualify the installed MySQL/WP_Query path. Native block/shortcode/modes/comments/enqueue behavior has focused PHP coverage. Installed WordPress/MySQL engines, editor/REST contention, browser/public rendering, interactive playback and live provider support remain unrun.
 
-The service author must be an existing WordPress user allowed to publish posts.
-It owns locally materialized posts; the transported Discourse author, topic and
-revision remain separately visible as source provenance. This does not imply
-user or login synchronization.
+Source/media preservation is approved. Exact sanitizer/provider/URI/nonblank/rich-default choices remain under discussion. Stock native post-KSES can remove iframe and multi-source elements; block rendering alone does not run the complete frontend oEmbed/content-filter pipeline. An actual removed media element during To preparation now leaves a protected local issue and the original native source intact, with no resolve mutation. A faithful native preparation clears that specific issue; this does not grant a new provider allowlist or claim every URI/attribute/provider is preserved. Existing math/Mermaid source, bundle, local fonts/notices and source-preserving render failure behavior are carried. The previous `preserve` setting remains existing behavior pending the explicit default decision.
 
-For legacy individually authorized **From Discourse** publications, use
-**Synchronize publications** under
-**Settings → DiscussionBridge**. The completion notice reports created,
-updated, already-current, and failed counts. If a failure occurs, the same
-page displays up to five non-secret failure reason codes for that run. Record
-those codes before refreshing; do not repeatedly synchronize an unexplained
-failure. Existing healthy posts are not deleted by a failed run.
+Approved active function uses an existing supported native component/embed where possible. Specific parsed loss of classic/module script constructs or known native event handlers now leaves the existing private local issue before To dispatch; a final owned From body veto includes the same specific loss observation before SQL. Escaped displayed code, comments and non-executable data script types are not classified as executable-function loss. Actual removal of nonempty inert script data, including alongside retained prose, instead reports specific DATA loss with its parsed type/count/bytes/hash through the same local limitation. It is never silently accepted as an equivalent copy or converted to a code block by inference. A nonempty native rendering removed entirely during preparation is a Bridge limitation, not invalid source. Native details/summary and retained media/math/Mermaid rendering continue through current supported paths. This detector does not prove every interaction/dependency/provider works. Where function cannot be preserved, the operator must decide how to proceed; intact originals alone do not make a broken copy equivalent. No new execution permission/ban, allowlist, UI, fallback or receiver Failure is introduced.
 
-WP Discourse is a separate plugin. For the Alpha demonstration its automatic
-publication and comments paths must remain disabled so one WordPress lifecycle
-cannot create competing topics.
+From writes require the actual same MySQL connection, named writer lock, savepoint witness and InnoDB post/meta/options/term tables. Owned editor/REST saves use a captured protected revision token; unversioned direct native post updates fail safely. Connection loss or unknown create retains reconciliation evidence; no second create or assumed rollback. Cache is invalidated after rollback/uncertainty. Unrelated plugin side effects are not proven transactional.
+
+From normally retains and verifies the entire immutable cooked Source byte count/SHA/UTF8 before native conversion. Its retained `Source.topic_url` is fixed to that revision and supplies the copied article base; a later current/canonical/destination URL is never substituted. The private job retains the exact Source plus prepared native article/body bytes and separate hashes before the same leased native write. Source integrity evidence remains unchanged. Synchronized native save is separate from anonymous canonical rendered-fragment verification and its actual observation time/hash. A source marker or delivery timestamp is insufficient. Scoped owned create/update preparation compares the complete prepared body at `wp_insert_post_data` before native SQL; a mismatch vetoes that write and retains an encrypted private issue, complete source, exact Work/action/revision/policy/cycle/lease and prior native receipts. Actual rollback uncertainty remains uncertainty. No receiver Failure or attention is fabricated.
+
+Known local limitations remain waiting observations, separate from runnable jobs and the generic error ceiling. Each invocation stages the current source feed and observes one known Work/current mapping/native receipt, without replaying arbitrary native callbacks or resetting attempt/cycle/time. Claims name positively identified unrelated mappings only. A genuine new source intent can supersede the refused Work; actual supersession/cancellation or owned withdrawal is reconciled through receiver status. There is no global or permanent mapping exclusion. The current claim route cannot select/exclude an exact Work/action/revision/cycle within one mapping; unobserved same-mapping work cannot be guessed. Faithful repair proof remains unresolved where final hooks depend on a new native ID, external effects or cannot be reproduced safely without a write. No trial claim/write is a repair test. Actual installed hook ordering, physical storage/concurrency and plugin side effects remain qualification limits; post-save complete-body equality and rollback checks remain in place.
+
+Source URL moves implement protected28/29/30/31 through the existing publisher and writer: prospective complete prepared snapshot, distinct signed To ownership, supported same-post slug operation, actual normal full native article expectation, independent anonymous new-URL verification, exact replay/truthful abort and real URL-commit revision continuity. [The component profile and native inputs](SOURCE_URL_MOVES.md) define the required actual theme integration and remaining installed qualification. Native administrator attention retry/reconciliation, notification and paid support/access mechanisms remain specific implementation boundaries. Native theme duplicate repairs and genuine1000-record/public/database rollback qualification remain installation-specific work.
+
+The clean baseline has no earlier Bridge protocol defaults, selectors, legacy initialization, adoption, dual SDKs or profile transitions. Native WordPress/PHP/Core API versions remain platform dependencies. Upgrades and recovery apply from the new V4 baseline onward.
+
+[Protected native backup and restore procedure](BACKUP_RESTORE.md) covers matched files/database/config/key material, sealed journals/index, native schema/identity and receiver reconciliation for1097–1100. It contains target substitutions and command templates; no native backup or restore has been executed. Selected native roots/database/engines/key provider/protected storage/service/cache controls and an isolated restore target are required execution inputs.

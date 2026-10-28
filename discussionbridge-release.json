@@ -1,12 +1,9 @@
 {
-  "family": {
-    "name": "DiscussionBridge",
-    "version": "0.2.0-alpha.43"
-  },
-  "component": {
-    "name": "DiscussionBridge for WordPress",
-    "version": "0.2.0-alpha.43"
-  },
-  "bridgeCompatibility": "0.2",
-  "repository": "https://github.com/DiscussionBridge/wordpress-discussion-bridge"
+  "family": {"name": "DiscussionBridge", "version": "0.4.0-alpha.1"},
+  "component": {"name": "DiscussionBridge for WordPress", "version": "0.4.0-alpha.1"},
+  "wire_version": "v4",
+  "candidate_id": "discussionbridge-v4-core-20261025-r6",
+  "release_version": null,
+  "buildStatus": "implementation_candidate_not_exact_approved_not_frozen",
+  "contract": {"schema_sha256": "8563a9b1346e3bf82635bd65a46bb1e25415a1003d7432f8fcb8c1c6e4f03c14", "php_sha256": "6eece074e1268d2d90890afd0215da80c06c23961b497a4df190f7876af0fc19"}
 }
