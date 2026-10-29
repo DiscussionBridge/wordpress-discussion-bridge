@@ -1,11 +1,11 @@
-name: Reproducible release package
+name: WordPress tests and reproducible package
 
 on:
   pull_request:
   push:
     branches:
       - main
-      - codex/publication-url-ownership
+      - 'codex/**'
     tags:
       - "v*"
   workflow_dispatch:
@@ -14,15 +14,68 @@ permissions:
   contents: read
 
 jobs:
+  php_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        php: ['8.1', '8.3', '8.5']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, openssl
+      - name: Run all declared PHP fixture suites
+        run: |
+          php tests/run.php
+          php tests/integration.php
+          php tests/source-url-proof.php
+      - name: Validate PHP syntax
+        run: find . -path ./.git -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  browser_assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install locked browser dependencies
+        run: npm ci
+      - name: Check and test browser source
+        run: |
+          npm run check
+          npm run test:browser
+      - name: Verify bundled asset freshness
+        run: |
+          npm run build
+          git diff --exit-code -- assets
+
   package:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [php_tests, browser_assets]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
         with:
-          php-version: "8.1"
+          php-version: "8.3"
       - name: Run adapter tests
         run: php tests/run.php
       - name: Validate PHP syntax
