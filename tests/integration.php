@@ -134,12 +134,15 @@ test('actual native complete content nullable dates and author provenance determ
 
 test('oversized source and envelope-only overflow use owned generated ReadMore with truthful full count/hash', function (): void {
     configured(); $client = new CmsClient(null, 'to'); $GLOBALS['dbt']['posts'][1]->post_content = '<p>' . str_repeat('é source ', 9000) . '</p>';
-    $capture = CmsSourceEdition::capture(1, $client); $body = CmsSourceEdition::delivery($capture, $client, null); expect($body instanceof stdClass);
-    expect($body->representation->kind === 'generated_excerpt' && $body->source_content_bytes > 49152 && $body->source_content_sha256 === hash('sha256', $capture['complete_content']));
-    expect(strlen($body->content_html) <= 49152 && str_ends_with($body->content_html, $client->codec()->generatedReadMore($body->canonical_url)));
+    $capture = CmsSourceEdition::capture(1, $client); $body = CmsSourceEdition::delivery($capture, $client, null);
+    expect($body instanceof stdClass, is_wp_error($body) ? 'oversized delivery: ' . $body->get_error_code() : 'oversized delivery is not a record');
+    expect($body->representation->kind === 'generated_excerpt' && $body->source_content_bytes > 49152 && $body->source_content_sha256 === hash('sha256', $capture['complete_content']), 'oversized delivery must retain the complete source count/hash');
+    expect(strlen($body->content_html) <= 49152 && str_ends_with($body->content_html, $client->codec()->generatedReadMore($body->canonical_url)), 'oversized delivery must fit and end with the owned Read More');
     $GLOBALS['dbt']['posts'][1]->post_content = '<p>' . str_repeat('"', 40000) . '</p>'; $capture = CmsSourceEdition::capture(1, $client);
-    $body = CmsSourceEdition::delivery($capture, $client, null); expect($body instanceof stdClass && $body->source_content_bytes <= 49152 && $body->representation->selection_full_request_bytes > 65536);
-    expect(strlen($client->codec()->encodeJson((object) ['mutation_id' => wp_generate_uuid4(), 'bridge_record' => $body])) <= 65536);
+    $body = CmsSourceEdition::delivery($capture, $client, null);
+    expect($body instanceof stdClass, is_wp_error($body) ? 'envelope-only delivery: ' . $body->get_error_code() : 'envelope-only delivery is not a record');
+    expect($body->source_content_bytes <= 49152 && $body->representation->selection_full_request_bytes > 65536, 'envelope-only fixture must exceed the full JSON envelope, not the content byte cap');
+    expect(strlen($client->codec()->encodeJson((object) ['mutation_id' => wp_generate_uuid4(), 'bridge_record' => $body])) <= 65536, 'generated selection must fit the JSON envelope');
 });
 
 test('same genuine edition replays historical generated selection and changed ordinary source uses accepted CAS', function (): void {
