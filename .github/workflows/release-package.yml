@@ -96,4 +96,5 @@ jobs:
         with:
           name: wordpress-discussion-bridge-${{ github.sha }}
           path: .artifacts/ci-a.zip
+          include-hidden-files: true
           if-no-files-found: error
