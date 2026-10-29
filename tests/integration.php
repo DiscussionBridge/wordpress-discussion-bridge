@@ -134,7 +134,12 @@ test('actual native complete content nullable dates and author provenance determ
 
 test('oversized source and envelope-only overflow use owned generated ReadMore with truthful full count/hash', function (): void {
     configured(); $client = new CmsClient(null, 'to'); $GLOBALS['dbt']['posts'][1]->post_content = '<p>' . str_repeat('é source ', 9000) . '</p>';
-    $capture = CmsSourceEdition::capture(1, $client); $body = CmsSourceEdition::delivery($capture, $client, null);
+    $capture = CmsSourceEdition::capture(1, $client);
+    $prefix = NativeContent::article_prefix($capture['complete_content'], 49152 - strlen($client->codec()->generatedReadMore($capture['body']->canonical_url)));
+    expect(is_string($prefix), 'native oversized prefix must be representable');
+    $direct = $client->codec()->createGeneratedExcerpt($capture['body'], $capture['complete_content'], $prefix);
+    expect($direct instanceof stdClass, 'the shared SDK must accept the native oversized prefix');
+    $body = CmsSourceEdition::delivery($capture, $client, null);
     expect($body instanceof stdClass, is_wp_error($body) ? 'oversized delivery: ' . $body->get_error_code() : 'oversized delivery is not a record');
     expect($body->representation->kind === 'generated_excerpt' && $body->source_content_bytes > 49152 && $body->source_content_sha256 === hash('sha256', $capture['complete_content']), 'oversized delivery must retain the complete source count/hash');
     expect(strlen($body->content_html) <= 49152 && str_ends_with($body->content_html, $client->codec()->generatedReadMore($body->canonical_url)), 'oversized delivery must fit and end with the owned Read More');
