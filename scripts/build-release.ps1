@@ -72,4 +72,7 @@ try {
         }
     } finally { $dbArchive.Dispose() }
 } finally { $dbStream.Dispose() }
+# Ordinary builds must also satisfy the reviewed SDK/notice acceptance checks;
+# a byte-consistent archive alone must not be reported as a valid package.
+& (Join-Path $PSScriptRoot 'verify-release.ps1') -Path $dbOutput | Out-Null
 [ordered]@{ path=$dbOutput; version=$dbVersion; members=$dbOrdered.Length; sha256=(Get-FileHash -LiteralPath $dbOutput -Algorithm SHA256).Hash.ToLowerInvariant() } | ConvertTo-Json

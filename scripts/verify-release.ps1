@@ -57,17 +57,17 @@ try {
     if ($dbPrivate.wire_version -ne 'v4' -or $dbPrivate.implementation_version -ne '0.4.0-alpha.1' -or $null -ne $dbPrivate.release_version) { throw 'Current development Contract tuple mismatch' }
     $dbRelease = [Text.Encoding]::UTF8.GetString($dbMembers['discussionbridge-release.json']) | ConvertFrom-Json
     if ($dbPrivate.candidate_id -cne 'discussionbridge-v4-core-20261029-r7' -or
-        $dbPrivate.source.commit -cne 'b90348f9f010ff58fbe52237eda3187c926334ec' -or
+        $dbPrivate.source.commit -cne '09d77c0209835c2d996aad294d161f167c7bd838' -or
         $dbPrivate.normative_sha256 -cne '808042688cbde88fac0acdf1187e4cb8c251e13025bfcf09cf3a3c361ca02003' -or
         $dbRelease.contract.normative_sha256 -cne $dbPrivate.normative_sha256 -or
-        $dbPrivate.dependency_manifest_sha256 -cne '5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e') {
+        $dbPrivate.dependency_manifest_sha256 -cne '478d6e5c8f96255f7124e5bd0d28f79975d4b8466fea097ef2edb2fb1151c282') {
         throw 'Package is not paired to the frozen reviewed shared source'
     }
     $dbSchemaPin = @($dbPrivate.members | Where-Object { $_.path -ceq 'cms-schema.json' })
     $dbPhpPin = @($dbPrivate.members | Where-Object { $_.path -ceq 'CmsCodec.php' })
     if ($dbSchemaPin.Count -ne 1 -or $dbPhpPin.Count -ne 1 -or
         $dbSchemaPin[0].sha256 -cne 'e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0' -or
-        $dbPhpPin[0].sha256 -cne '9ff58c7e9547167bc8f546483c040daa0232cad171ddd48c15f8b9c821294ed7' -or
+        $dbPhpPin[0].sha256 -cne '502df4f0324ac9b65c0068f1025d71290d149522e98a29382763816f01a20555' -or
         $dbRelease.candidate_id -cne $dbPrivate.candidate_id -or
         $dbRelease.contract.schema_sha256 -cne $dbSchemaPin[0].sha256 -or $dbRelease.contract.php_sha256 -cne $dbPhpPin[0].sha256) {
         throw 'Release metadata and private Contract pins disagree'
