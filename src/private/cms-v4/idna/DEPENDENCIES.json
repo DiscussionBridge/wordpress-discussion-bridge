@@ -1,0 +1,1557 @@
+{
+  "format": 1,
+  "component": "discussionbridge-v4-private-idna",
+  "namespace": "DiscussionBridge\\CmsV4\\IdnaVendor",
+  "php_minimum": "8.1",
+  "additional_mandatory_extensions": [],
+  "runtime_packages": [
+    {
+      "name": "rowbot/idna",
+      "version": "0.3.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/TRowbotham/idna.git",
+        "reference": "504900acc8e465a17668a61ae30391d1aebbb4f2"
+      },
+      "license": [
+        "MIT"
+      ]
+    },
+    {
+      "name": "rowbot/punycode",
+      "version": "1.0.4",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/TRowbotham/punycode.git",
+        "reference": "ec116e99cb089a25d45147813d61bfa2deb29328"
+      },
+      "license": [
+        "MIT"
+      ]
+    },
+    {
+      "name": "symfony/polyfill-iconv",
+      "version": "v1.43.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/symfony/polyfill-iconv.git",
+        "reference": "254724d95fe01b679cd97d88786e9623ee00bfb7"
+      },
+      "license": [
+        "MIT"
+      ]
+    },
+    {
+      "name": "symfony/polyfill-intl-normalizer",
+      "version": "v1.43.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/symfony/polyfill-intl-normalizer.git",
+        "reference": "ebd57ccc7edb93d632e184efbe7693d2517bab3b"
+      },
+      "license": [
+        "MIT"
+      ]
+    },
+    {
+      "name": "symfony/polyfill-mbstring",
+      "version": "v1.43.3",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/symfony/polyfill-mbstring.git",
+        "reference": "122889ed24dc000165bcbfd77ec412f15cbdfc6a"
+      },
+      "license": [
+        "MIT"
+      ]
+    }
+  ],
+  "build_only_tool": {
+    "name": "humbug/php-scoper",
+    "version": "0.18.20",
+    "source": {
+      "type": "git",
+      "url": "https://github.com/humbug/php-scoper.git",
+      "reference": "f1991b803eb84b534b8b2aa1b477c170d1b611e1"
+    }
+  },
+  "inputs": [
+    {
+      "path": "php-dependencies/composer.json",
+      "bytes": 628,
+      "sha256": "63a35d5ac88642a88a0f0e329b3ddf9da888bdeb36b36a2e33b5b493d09d8e4e"
+    },
+    {
+      "path": "php-dependencies/composer.lock",
+      "bytes": 13682,
+      "sha256": "3c5c2a7da23bbc4046d40ae5c8c91d7952f6f00478f0e695973fc40584dc6432"
+    },
+    {
+      "path": "tools/php-idna/composer.json",
+      "bytes": 407,
+      "sha256": "e5727317cd18ebf65642f8e51ad6eb4a902f0d69a083429b6dd6cb8d49ce5353"
+    },
+    {
+      "path": "tools/php-idna/composer.lock",
+      "bytes": 66255,
+      "sha256": "917c708c9822c72a13b67273c033e6b86c56f5332f299bac18c859187a34110b"
+    },
+    {
+      "path": "tools/php-idna/scoper.inc.php",
+      "bytes": 3073,
+      "sha256": "321a471658db551a20fd542be284875eda209e736367f3741bb8a18c9ff2f2a4"
+    },
+    {
+      "path": "implementation/php-idna-bridge.php.in",
+      "bytes": 935,
+      "sha256": "5ad4772b1aaad5db05c14d1034dbb5d66de676213d90bc1db700a0361c659273"
+    },
+    {
+      "path": "scripts/build-php-idna.mjs",
+      "bytes": 10279,
+      "sha256": "82f01421e243dd0b7becca90e3b26a1bf2daff46e80055888dbda96ba91c08e6"
+    },
+    {
+      "path": "tools/unicode17/INPUTS.json",
+      "bytes": 1880,
+      "sha256": "7fa636999e8e33fde7475809b98372b1eb15fb168b0c3b4324d5e667630d3e8c"
+    },
+    {
+      "path": "fixtures/unicode17/UnicodeData.txt",
+      "bytes": 2198209,
+      "sha256": "2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c"
+    },
+    {
+      "path": "fixtures/unicode17/CompositionExclusions.txt",
+      "bytes": 9007,
+      "sha256": "2f239196ef3b5b61db5cc476e9bd80f534d15aa1b74e1be1dea5d042a344c85f"
+    },
+    {
+      "path": "fixtures/unicode17/CaseFolding.txt",
+      "bytes": 87539,
+      "sha256": "ff8d8fefbf123574205085d6714c36149eb946d717a0c585c27f0f4ef58c4183"
+    },
+    {
+      "path": "fixtures/unicode17/SpecialCasing.txt",
+      "bytes": 17049,
+      "sha256": "efc25faf19de21b92c1194c111c932e03d2a5eaf18194e33f1156e96de4c9588"
+    },
+    {
+      "path": "tools/unicode17/Compiler.php",
+      "bytes": 24849,
+      "sha256": "0ee54eab38c94cf1040e5e856f30e4034f6ed795e3ddaaa893979802d6298e51"
+    },
+    {
+      "path": "tools/unicode17/LICENSE",
+      "bytes": 1068,
+      "sha256": "eaa5d6e59ff1d5322ae36d3ab9124460df72d2d0c8af60a99222e8a90dcbdf31"
+    },
+    {
+      "path": "fixtures/unicode17/LICENSE.txt",
+      "bytes": 1995,
+      "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+    },
+    {
+      "path": "implementation/php-contextj.php.in",
+      "bytes": 1190,
+      "sha256": "1e84c8040161451fdb961b2c156cc3934e8ebd7066aadf2d4ddab5f8d8caad4d"
+    }
+  ],
+  "transformations": [
+    "fixed private namespace; PHP-8.1 parser/printer target",
+    "bind Rowbot Normalizer and two UTF8 functions privately; suppress ambient Normalizer alias",
+    "replace exactly one source-hashed ContextJ method with current-occurrence UTF8 byte-offset validation, including virama advancement",
+    "disable package-global polyfill bootstrap; add two explicit-UTF8 private bridges",
+    "regenerate six private NFC/data maps with unchanged pinned Symfony compiler and official Unicode17 inputs; preserve both licenses",
+    "regenerate ordinary authoritative Composer autoload from scoped package metadata"
+  ],
+  "upstream_members": [
+    {
+      "path": "vendor/rowbot/idna/.gitattributes",
+      "bytes": 66,
+      "sha256": "1a1dbe176bc233b499d35a57db7513f2941c99ab9759f177830c9149be99005b"
+    },
+    {
+      "path": "vendor/rowbot/idna/.github/workflows/tests.yml",
+      "bytes": 3792,
+      "sha256": "4540cabd91f546d21500337222d7f6856b9f248579312498361a29298866ffaa"
+    },
+    {
+      "path": "vendor/rowbot/idna/.gitignore",
+      "bytes": 83,
+      "sha256": "a2b8c8703f6786d066de0a828b19113a4314f7603bbabaf74b4bbb224f6e0df3"
+    },
+    {
+      "path": "vendor/rowbot/idna/.phpcs.xml",
+      "bytes": 528,
+      "sha256": "0220bbea4e19e3d16a2ff3203faeb8ba13ad09cd477b3b72c6372904f6542372"
+    },
+    {
+      "path": "vendor/rowbot/idna/CHANGELOG.md",
+      "bytes": 1142,
+      "sha256": "081a98dd58ca37e4ee8c92a0cf473b390129218b6548ab6257ba1c645bc558ca"
+    },
+    {
+      "path": "vendor/rowbot/idna/LICENSE",
+      "bytes": 1073,
+      "sha256": "067e9ea6499a1f9ad033f2d5e3909c83be51d55fa416d4bab913894f19ab68d3"
+    },
+    {
+      "path": "vendor/rowbot/idna/README.md",
+      "bytes": 13633,
+      "sha256": "e4067e630c6b41b28df4d65c39ea24919ebd50fcb2112847e12a89cc893c95f0"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/Builder.php",
+      "bytes": 2345,
+      "sha256": "abc862088aa3d3179903c9cb702fc150af8d4c0a79292b0e0f40488cb9ac526e"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/IdnaDataBuilder.php",
+      "bytes": 3612,
+      "sha256": "c418063c8ef98c86360bb97938c4dae811614d7d5f4c8df90ec8716216716ecd"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/RegexBuilder.php",
+      "bytes": 8028,
+      "sha256": "9838995b7d3d968a87b27da16c95838da5a547537dc043a7be5e4d66a473a09b"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/ViramaDataBuilder.php",
+      "bytes": 1257,
+      "sha256": "a4777eb47f6d023c71552b699f4ff4a354d216b75444f3c8dc3a2b6037fb5ad7"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/generateDataFiles.php",
+      "bytes": 452,
+      "sha256": "17caf6c55c4edf01c3b70b1c3a0335d1870ec467b3f53e9a29b94a257112cb8b"
+    },
+    {
+      "path": "vendor/rowbot/idna/composer.json",
+      "bytes": 1211,
+      "sha256": "f35b027673efc9ac317cd9cb195bce64df398543cb8c88478f3947c1f7839081"
+    },
+    {
+      "path": "vendor/rowbot/idna/phpstan.neon",
+      "bytes": 225,
+      "sha256": "61ae623a25fc0ff0274468f96757a358dcc160da2bb4534d9de900d920f7ddbc"
+    },
+    {
+      "path": "vendor/rowbot/idna/phpunit.xml",
+      "bytes": 663,
+      "sha256": "6444ab9f4cbc18b52bf106f90363026ed0c3207664c4d11a3dca5a7e70d00071"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/DisallowedRanges.php",
+      "bytes": 8453,
+      "sha256": "325ea6f97df26596515bc09c119f60f6085dcd7da38051d67530e3ba65d8bcef"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/Regex.php",
+      "bytes": 95619,
+      "sha256": "f99aac532269000b5b20c427379d464e7d8a27656e82310eec9047f3f83ebf6b"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/deviation.php",
+      "bytes": 83,
+      "sha256": "99a5e49efead1d6ee1780af3023d1f5fef26c7febb693e1ff9531c40c9dd63a3"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/disallowed.php",
+      "bytes": 49882,
+      "sha256": "3e38d0a23815f358485c567524c2c8a75af34ca5b5d67a6e70e181f1913d47a1"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/ignored.php",
+      "bytes": 5250,
+      "sha256": "ff47b3407f3a7fa6be7843ae7f592204d8e487ded39d15a5b3112a4ebe0d663e"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/mapped.php",
+      "bytes": 114003,
+      "sha256": "22216a81e7566c0bebbb264398a2d40c7f363081fac943810f7e5cd97b376a1a"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/virama.php",
+      "bytes": 964,
+      "sha256": "0461dc39dcaf522a07a37a1a6b5b81c9b4b44ee3f05cbbb1613684e8ed5e8154"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/CodePoint.php",
+      "bytes": 2823,
+      "sha256": "d6bb2b13d9e5a542cd2e1d044153c815199f9f944715cfd7c37b78e4f1a199e2"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/CodePointStatus.php",
+      "bytes": 2043,
+      "sha256": "d4d2f2bd11d5819d20966bf40e76daddc7d457af51271aeb85c0e1a0bb7e3a19"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/DomainInfo.php",
+      "bytes": 1723,
+      "sha256": "a5320d255ff68f11aab94addf49afd0d6a1b77c1125a3cb7663861821a862d9e"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/Idna.php",
+      "bytes": 10277,
+      "sha256": "734c772071705c059b8d4896f1f29099ed1bb8c79fa5b3e80da64d9e3d2db264"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/IdnaResult.php",
+      "bytes": 979,
+      "sha256": "999d973f28f042fefe86a010a9dda03797f7c4d9bc17f1b3952e91681e99bc02"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/LabelValidator.php",
+      "bytes": 8930,
+      "sha256": "7b34a298511b45a1217c272595abd349164fce77464973e5ea35725cdf2e6ee0"
+    },
+    {
+      "path": "vendor/rowbot/idna/tests/IdnaV2Test.php",
+      "bytes": 7440,
+      "sha256": "728fe726c38fe68fda36a6043efeb0073b1fb418b19013d64d22472053e72b3e"
+    },
+    {
+      "path": "vendor/rowbot/idna/tests/IdnaV2TestCase.php",
+      "bytes": 6851,
+      "sha256": "7aec4e2cb9afbd5b024d2ed3d8e7ba56ef4b81b1d4223093df77b205a6b1b24b"
+    },
+    {
+      "path": "vendor/rowbot/punycode/.gitattributes",
+      "bytes": 66,
+      "sha256": "1a1dbe176bc233b499d35a57db7513f2941c99ab9759f177830c9149be99005b"
+    },
+    {
+      "path": "vendor/rowbot/punycode/.github/workflows/tests.yml",
+      "bytes": 4459,
+      "sha256": "611e74e90596b353c7970526ca30447e326536a2b40023f4a04b487a7714d4d2"
+    },
+    {
+      "path": "vendor/rowbot/punycode/.gitignore",
+      "bytes": 77,
+      "sha256": "6be3731f917144f754a7a8589ebde8de9f0844c68e27d4d3ace4369b9a7089bb"
+    },
+    {
+      "path": "vendor/rowbot/punycode/.phpcs.xml",
+      "bytes": 281,
+      "sha256": "2555a7c70bd33dc22df8d28d80677b9f5e7f2220060309554c7d35b3c10e28d7"
+    },
+    {
+      "path": "vendor/rowbot/punycode/CHANGELOG.md",
+      "bytes": 473,
+      "sha256": "f2518ee00805adbd123dcbee90524a4133db7392cf4180926d91495a8aa6967c"
+    },
+    {
+      "path": "vendor/rowbot/punycode/LICENSE",
+      "bytes": 1073,
+      "sha256": "067e9ea6499a1f9ad033f2d5e3909c83be51d55fa416d4bab913894f19ab68d3"
+    },
+    {
+      "path": "vendor/rowbot/punycode/README.md",
+      "bytes": 3507,
+      "sha256": "9d4ef9247e270921ffb3a00df0a77854e0124e834f8b1a16a94226420c11fdaa"
+    },
+    {
+      "path": "vendor/rowbot/punycode/composer.json",
+      "bytes": 1004,
+      "sha256": "8fc98677376da7776d427dbb961433d5875d489e276b278a6a51513edce619f8"
+    },
+    {
+      "path": "vendor/rowbot/punycode/phpstan.neon",
+      "bytes": 174,
+      "sha256": "d3006eb78feb9b019806a834cdc894a7a6a5e6fdc73ad25c2e414ae243de5c56"
+    },
+    {
+      "path": "vendor/rowbot/punycode/phpunit.xml",
+      "bytes": 757,
+      "sha256": "5a3bfd70f6a6b8fe6ecb422214ac77f08f5e2a6ea1424d8faff0308d2f1f048b"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Exception/InvalidInputException.php",
+      "bytes": 129,
+      "sha256": "3e051063386f3b0d4cfdbd423d082401dc087f51b1bc5eca476463501202fb06"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Exception/OutputSizeExceededException.php",
+      "bytes": 135,
+      "sha256": "89a11e95dcea01d5055f8fc1a0b2e0b6c5c3de8861ca183a4a1200f03a77dc03"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Exception/OverflowException.php",
+      "bytes": 131,
+      "sha256": "e46624aaa3fba3ef346159d35439e8dbf2cc05957a9e1fcecd14fd17da231a26"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Exception/PunycodeException.php",
+      "bytes": 133,
+      "sha256": "4da306f2e2cc6fbfd611c2b9f82a71c508a8dd19ffa94a59ab10f028c509499b"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Punycode.php",
+      "bytes": 13562,
+      "sha256": "fe4efc37aa1a84d26df797b5bb16bd12eff12c121204f7b094c2baed387792bd"
+    },
+    {
+      "path": "vendor/rowbot/punycode/tests/PunycodeTest.php",
+      "bytes": 6387,
+      "sha256": "016115d0e8e2fc163ba94b04b6bec8428f1ac06cf85df8e6b164bdc685690c4b"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Iconv.php",
+      "bytes": 21612,
+      "sha256": "0e87807cd547622f6f54f973632a0b84762da67d839b4ef14a060177bd8abac8"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/LICENSE",
+      "bytes": 1068,
+      "sha256": "eaa5d6e59ff1d5322ae36d3ab9124460df72d2d0c8af60a99222e8a90dcbdf31"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/README.md",
+      "bytes": 422,
+      "sha256": "e5dda08da8a299847725036682e218cb391a788496406be7169ce50d2d8fb8c5"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.big5.php",
+      "bytes": 233123,
+      "sha256": "a2e54d5b1199a4ba555ae09e44172471caedbd6ede8b159f085bac752a76c30f"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp037.php",
+      "bytes": 3779,
+      "sha256": "07c8519aa6579eabfb0b55682f91aec7c76ca46cf05e3541df75a92db3da16ac"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp1006.php",
+      "bytes": 3860,
+      "sha256": "4c9a5da01e3719b5a868826ae9aed06554ff6ecaf18fe481779572923c1e332d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp1026.php",
+      "bytes": 3779,
+      "sha256": "03271aa387171b8cd1c62f812772f7abb79ba6a145a9c9acd5dfc8b3f661ab7a"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp424.php",
+      "bytes": 3210,
+      "sha256": "5e3f4cff634e72edde90121dcf5b12499b1771118d6377892f183db8d596a7ca"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp437.php",
+      "bytes": 3841,
+      "sha256": "99d3969c5719cddb763bf73613772482a41bf908284b11bd628c8c90990915e1"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp500.php",
+      "bytes": 3779,
+      "sha256": "3e6743bcce162898dab176f9e6c4b0498c9981548a98bc2f44ad34a80b022fba"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp737.php",
+      "bytes": 3834,
+      "sha256": "abd4075e74e3228c4e75d6be2b89a3a576c90e708cbb676ccd4d72b2047e1819"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp775.php",
+      "bytes": 3815,
+      "sha256": "ddac5f0103602282537bd66b74d117ba0192449848f470f1372ab7eb9ca0bdff"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp850.php",
+      "bytes": 3809,
+      "sha256": "75fd178d753116e2f02d1ff883ed189e4e647414dd93d7a04f8e6a5e6c319379"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp852.php",
+      "bytes": 3808,
+      "sha256": "c4159f3798ce5fe94fe171679821dc451c6d539fd2760dfe7969516111aea0e3"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp855.php",
+      "bytes": 3809,
+      "sha256": "1d654f9b00a81be96a7b5277ade1d8e91f4ff8feda5847dfeb8392c6b469ba94"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp856.php",
+      "bytes": 3194,
+      "sha256": "44b8524a6b48962953637f4faee1f7d9c13df267b9acd5354a22c6bad4462f0c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp857.php",
+      "bytes": 3763,
+      "sha256": "c24939c148d6f338b6c9a5b1a2381d243106f704112d2ec95e31c22eecfa0599"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp860.php",
+      "bytes": 3840,
+      "sha256": "a8240150074937ab593151d4161e71297a3ee9280ef38796c427fcfa546bfb23"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp861.php",
+      "bytes": 3841,
+      "sha256": "293b764ca8c60ac0bca1c05af5d8b6e15f0bcf32d8e1e22c632fb9e08602ceda"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp862.php",
+      "bytes": 3841,
+      "sha256": "943b1c6e3663bd8948955592a5fa8e52701cf5f8e40109c07ab443b0a1dcef13"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp863.php",
+      "bytes": 3841,
+      "sha256": "b60491d8079efbe3f6e5a038c595fc5086b4674105233e2cb50bfbb428d04d98"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp864.php",
+      "bytes": 3779,
+      "sha256": "b1e7867c2a47398923abeecaaf06d28b5e332272c399e40bf6ce8d7f8c774a11"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp865.php",
+      "bytes": 3841,
+      "sha256": "8f934278fe3ba0ea5cec0fdbf8edd6660e01a5ff40e8f8b00e216f97c91f7868"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp866.php",
+      "bytes": 3831,
+      "sha256": "3c08b97af05c5d3944a7d975da138c3eba9c996eb28b0b893b064af4bbaf599d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp869.php",
+      "bytes": 3676,
+      "sha256": "c378a7217e1ce53a5bda3bbcd128c087f5db171a37a102a8a49c82916a779bc3"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp874.php",
+      "bytes": 3410,
+      "sha256": "0d8dee582d275f8489c13eb6bfbbb07fefb99a3a429a99b1cb03cf0e0254b864"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp875.php",
+      "bytes": 3776,
+      "sha256": "d5f67cf4fa0057692b223c8298d6b2cab4bf07e65bfeb57b20a06fd7f7be4b1e"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp932.php",
+      "bytes": 134095,
+      "sha256": "880e65e55e799ed6eaaa2458580955670934967be00460aa2692517e693d8c59"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp936.php",
+      "bytes": 372283,
+      "sha256": "4879962a3ba53a9e8b4af0b1e2c0b307e33650745e174b0087bf4b7989a0e986"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp949.php",
+      "bytes": 291504,
+      "sha256": "4b3e9c56d6885960b74c24db759b8c16aabdf7c5d1a3b241c357431a4c27b0e9"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp950.php",
+      "bytes": 231436,
+      "sha256": "70b95b8f1ec045bedea1ac0f7c6d9bd86fbaedf92a9c4216e8eccb7707749205"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-1.php",
+      "bytes": 3779,
+      "sha256": "1c4f44dffb2af1e6f8cae040a050cb3c22b45e5425a8e79e1ddaa4706a937d3d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-10.php",
+      "bytes": 3780,
+      "sha256": "a109549dbcc4ea58944fd08e9ec7800d34a6e7249a64d4d767db60e8f64f17d3"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-11.php",
+      "bytes": 3746,
+      "sha256": "4d110f9364ca12a39113a246284a1735981ec235c50fb410a00dbff938179a1b"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-13.php",
+      "bytes": 3783,
+      "sha256": "30edec9dd443eb5578e5e269f1dde92821a0765b7ff5a4bc7b64b1f59c00583a"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-14.php",
+      "bytes": 3801,
+      "sha256": "502ce563928741ef4a59ccc067b33b65030ebaad5b8e7e9ccf6bd96d4695454f"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-15.php",
+      "bytes": 3780,
+      "sha256": "14f5b987793be6502531a04f8efbacef8bec4e4d70d57eb7ff973e5defa63e24"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-16.php",
+      "bytes": 3782,
+      "sha256": "4792714fc766847764abd2faf88c5d29d38a1fc46ecfab28e24a3460abcc1c9d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-2.php",
+      "bytes": 3779,
+      "sha256": "9d51bacfaed9f883ea37b020beea0cfcdae70cfa697a2294bc693f35dd37dc4e"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-3.php",
+      "bytes": 3674,
+      "sha256": "f8478a18e8e8009c113f2762df311185807066d9e138605404dec7a0552ebac9"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-4.php",
+      "bytes": 3779,
+      "sha256": "20d490ca9c89e71e06d0fa16a39b8995a719fa05e195784cf8c6e6e216a59ba0"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-5.php",
+      "bytes": 3780,
+      "sha256": "302346adc98637175665bcb9bdc404390eee56317e8e89ac11b8336cb39c88bb"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-6.php",
+      "bytes": 3104,
+      "sha256": "6e6ba6caedc9b2472f6ec258916fa600b80940d70c758cd89bbca48f4a902428"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-7.php",
+      "bytes": 3692,
+      "sha256": "fccf17833e1537c2e4c77eec388080a361a79cca52ec380dea56d2e1a668efa8"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-8.php",
+      "bytes": 3242,
+      "sha256": "c01761873f234597481edff8b989718877bc8bbd5431b3580f406f2f4f5c640a"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-9.php",
+      "bytes": 3779,
+      "sha256": "17c1d08f71f657ec271258379a78d32167bed76af16fa42f6c9741ea0b28bde4"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.koi8-r.php",
+      "bytes": 3835,
+      "sha256": "5c701f27ed0bc4c26a3a0a7f8b1a3a8a30590061c647f33aeaeedc4ee87ad17b"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.koi8-u.php",
+      "bytes": 3827,
+      "sha256": "64e5e93b140caf62ba8dc2a6dc7ff1c3f5a810d4c5b2c23b8fa79037aecec149"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.us-ascii.php",
+      "bytes": 1859,
+      "sha256": "c735b6ccbcf3520b78172390cca8e7a174605ee76424b3afd94823d64cacba05"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1250.php",
+      "bytes": 3721,
+      "sha256": "1521022f81b184fc69c2944af2aa811b93dc303aaf4b4e6b2aaf072230a34f90"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1251.php",
+      "bytes": 3782,
+      "sha256": "aec8fa4bbb5d0d3e4b742eac51d76c7c0a1dce3bb224dcadfe225d842ddb6355"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1252.php",
+      "bytes": 3721,
+      "sha256": "d90e22dd54c8926244b3d8d81920a7ef78b46dfa1f2d9ac4a98114bd71736090"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1253.php",
+      "bytes": 3542,
+      "sha256": "d659c7a9f7924dc423124fa29da9484d6e692dc7bdaff7673f1022f572c518e7"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1254.php",
+      "bytes": 3691,
+      "sha256": "c56babe54f9c9b627266cf703e23da067b713ca7b618ca4828e4b3de8abe3cc7"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1255.php",
+      "bytes": 3454,
+      "sha256": "f50b318e2689412d409b680f960f7b4ff93301c3e2f3f45363f4100cd9208982"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1256.php",
+      "bytes": 3800,
+      "sha256": "66d4b1f4a2a34304fd115186ad2eb9ca5d456077d807385a8a7fb0f892ec4793"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1257.php",
+      "bytes": 3616,
+      "sha256": "111f7e8c22feee487326a7a875d4f579e8c53d75e4dd17298abb553bc63dace1"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1258.php",
+      "bytes": 3662,
+      "sha256": "a1693c864ad036e17314a3283f1536affab89d8bc21e3b9fdd48fbb2e1ecefe3"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/translit.php",
+      "bytes": 81902,
+      "sha256": "866be895b330118132b78fc8d21b84c4a1ef48ad57619195d1bf96bc624f2e45"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/bootstrap.php",
+      "bytes": 3947,
+      "sha256": "6c2e94b692ef55e4aa08e15c9ecf43c647055804825159b2c0ecd17e43474f7f"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/bootstrap80.php",
+      "bytes": 4542,
+      "sha256": "22dcfcf61611d95f8f097f631f2ab56b66bf1050b3bb75ea867e653055b1810e"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/composer.json",
+      "bytes": 966,
+      "sha256": "bcaa2f70b1a209f0a473932f64cf5b7397661cf529a71935cb47630ffc224f91"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/LICENSE",
+      "bytes": 1068,
+      "sha256": "eaa5d6e59ff1d5322ae36d3ab9124460df72d2d0c8af60a99222e8a90dcbdf31"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Normalizer.php",
+      "bytes": 11745,
+      "sha256": "6ac464fc24012207cd73ef50c1390c9fb7aca742c186b91efdd3992092cfcda0"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/README.md",
+      "bytes": 432,
+      "sha256": "e88d64931fb6459ae33c4c35213323d5c0621c5ec2f921d00e8ec7011c46eb2c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/stubs/Normalizer.php",
+      "bytes": 404,
+      "sha256": "f98e9fe75a0e2008e4e16ca369aa132a45408d4034b668e4afea9fcddca69964"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/canonicalComposition.php",
+      "bytes": 17635,
+      "sha256": "d05e3b74aebcb4331dfed345c77d096a7036a6d7360f0ff8da288890fa7397f5"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/canonicalDecomposition.php",
+      "bytes": 39035,
+      "sha256": "1bc87057e04a900531aed8819fb59e7aa8321a9ac62a38b1672759f6464ecc62"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/combiningClass.php",
+      "bytes": 13636,
+      "sha256": "f98aaf043ea59c470359e1fef1792f95ed34a2111fd7781744df926ceea8f2d7"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/compatibilityDecomposition.php",
+      "bytes": 66927,
+      "sha256": "8fdf5cb56ec0a8021db5b090b981fff9250ced89dc2c8bfbaee0fe80b5b644a8"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/rawCanonicalDecomposition.php",
+      "bytes": 38635,
+      "sha256": "99dba12f02b63f20049aac915c50799c3e6c9f434a9548ef354d96c0857b5969"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/rawCompatibilityDecomposition.php",
+      "bytes": 68567,
+      "sha256": "42db8ebeda91d49cc757a1d0d562c8462f1ab08b4711cf837e1595679f988e3c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/bootstrap.php",
+      "bytes": 962,
+      "sha256": "22d58e117d75904b90c22c692c908d2f1f1cd54f1bcfaf94168a8bcb7a7f6996"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/bootstrap80.php",
+      "bytes": 965,
+      "sha256": "94fdd20bc0e35705fec054797d1a7f3f0f13cde9832782033eb2508fac7d6a0d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/composer.json",
+      "bytes": 1019,
+      "sha256": "55e6d5615cae9bb4b83413fd669f8889cf206a94c7efacae6c4ddddc9d0c5ca5"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/LICENSE",
+      "bytes": 1068,
+      "sha256": "eaa5d6e59ff1d5322ae36d3ab9124460df72d2d0c8af60a99222e8a90dcbdf31"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Mbstring.php",
+      "bytes": 60026,
+      "sha256": "c06399a1ab9fb7cf181c61c1868d531fa8ecaee2ac30b90ba17ee5b7aa03ae46"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/README.md",
+      "bytes": 370,
+      "sha256": "7686ab9250b91f0b706d6a5aac4e6bbf4b8865ec323bbb420343f19e98d91d14"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/caseFolding.php",
+      "bytes": 2401,
+      "sha256": "99cea898c03847d05e1c143cf64183c57749b93f578f5bfcd856f89d700b9b85"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/eastAsianWidthRegexp.php",
+      "bytes": 2016,
+      "sha256": "31b076afc6524d15d2c490dd67c53dfbb9da3163203c157ce407116ba7a1a491"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/lowerCase.php",
+      "bytes": 24539,
+      "sha256": "df2b1879ae0f74d86996a4790de37b534c1b406002930550bc087885ae54f0ea"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/titleCase.php",
+      "bytes": 2447,
+      "sha256": "b5286ef519f98829f8bbce94b674975c1037dd9c8ba347ad2b1cd990a0975b68"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/titleCaseRegexp.php",
+      "bytes": 6201,
+      "sha256": "4eef657adbee39f7badd695b1d60b152b047385966a98b6d8d411554573ec596"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/upperCase.php",
+      "bytes": 26322,
+      "sha256": "4ae4778ee941291582b801bcddeaac401068e0e5dde7357ef06f9e882131b026"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/bootstrap.php",
+      "bytes": 363,
+      "sha256": "0449da72338523c51270ddfe84447cd16fc110b7d4fae2bee1c2790d9f113fb0"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/bootstrap72.php",
+      "bytes": 8529,
+      "sha256": "8a45e926381803b688b3961032805f5ae317e953af1a980e0e0f63db5e3babfd"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/bootstrap80.php",
+      "bytes": 10041,
+      "sha256": "e998cba06760c8e191f47c70b7017164e7434ab93eaabbb8bdfe94943c450c6b"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/composer.json",
+      "bytes": 1010,
+      "sha256": "8ccd5687a056c76aa1c488e520302b441e31be3ef16482c2e35778b035fb1c09"
+    }
+  ],
+  "members": [
+    {
+      "path": "bridge.php",
+      "bytes": 935,
+      "sha256": "5ad4772b1aaad5db05c14d1034dbb5d66de676213d90bc1db700a0361c659273"
+    },
+    {
+      "path": "composer.json",
+      "bytes": 689,
+      "sha256": "1ce966d5ec541e58c48645be23ef6e9425d2ef50401376dc8e336977f7c3f159"
+    },
+    {
+      "path": "composer.lock",
+      "bytes": 13682,
+      "sha256": "3c5c2a7da23bbc4046d40ae5c8c91d7952f6f00478f0e695973fc40584dc6432"
+    },
+    {
+      "path": "vendor/autoload.php",
+      "bytes": 771,
+      "sha256": "ee1ae5d4c6e2d946c8a3dc1bbae0b3b88c38b804d120790b34451c86bd564d94"
+    },
+    {
+      "path": "vendor/composer/ClassLoader.php",
+      "bytes": 16378,
+      "sha256": "d4b2313e562edf942838ec316d983c1a3459ca67da3e5658e861200b0b3693c2"
+    },
+    {
+      "path": "vendor/composer/InstalledVersions.php",
+      "bytes": 16243,
+      "sha256": "792da8ad19b216aa1ff1b8a83daae244992ff9173c5426093ab42d3a714bcc80"
+    },
+    {
+      "path": "vendor/composer/LICENSE",
+      "bytes": 1070,
+      "sha256": "c8cce4b6b9729f264ffdf9296d505d63432497feeed1f586d1902b942197e024"
+    },
+    {
+      "path": "vendor/composer/autoload_classmap.php",
+      "bytes": 2576,
+      "sha256": "b31dc5d363ed70fc225bb3bc69573a3baa289b54eb49b30147bd1ca7523adb76"
+    },
+    {
+      "path": "vendor/composer/autoload_files.php",
+      "bytes": 202,
+      "sha256": "df4db4278c964bddcbd572482416f5e42ef8e06db7f1204cba607fed802b6439"
+    },
+    {
+      "path": "vendor/composer/autoload_namespaces.php",
+      "bytes": 139,
+      "sha256": "ede505407590638a435137f4e060136f1008de79fc169b3de9793423b0cea38c"
+    },
+    {
+      "path": "vendor/composer/autoload_psr4.php",
+      "bytes": 847,
+      "sha256": "180811a3cf179d1a7be7787d63b4f18d8da41ecdb72bbe5776c455991f0ba10d"
+    },
+    {
+      "path": "vendor/composer/autoload_real.php",
+      "bytes": 1721,
+      "sha256": "c03fb01ece033d830b1534662946fe86ba8f61b9ee21d48bf26e7f9f94a98eee"
+    },
+    {
+      "path": "vendor/composer/autoload_static.php",
+      "bytes": 5052,
+      "sha256": "cdc57381fc5412f5d2d18b739f959f8c8b9f5842593065c62636add5195f7a44"
+    },
+    {
+      "path": "vendor/composer/installed.json",
+      "bytes": 10942,
+      "sha256": "42ec09a370a95d83fd5c857eb6c734576ba94ec86fe923890f13dc86cc1ef802"
+    },
+    {
+      "path": "vendor/composer/installed.php",
+      "bytes": 1960,
+      "sha256": "af58715fcc1f33601e220f30f9517b72cc2937226a1b4c11e3ae3a339388b2b9"
+    },
+    {
+      "path": "vendor/composer/platform_check.php",
+      "bytes": 925,
+      "sha256": "bab4df5d83dfdacde4974e195054cf7e576cc1814fff215381fec4da66ee97c9"
+    },
+    {
+      "path": "vendor/rowbot/idna/CHANGELOG.md",
+      "bytes": 1142,
+      "sha256": "081a98dd58ca37e4ee8c92a0cf473b390129218b6548ab6257ba1c645bc558ca"
+    },
+    {
+      "path": "vendor/rowbot/idna/LICENSE",
+      "bytes": 1073,
+      "sha256": "067e9ea6499a1f9ad033f2d5e3909c83be51d55fa416d4bab913894f19ab68d3"
+    },
+    {
+      "path": "vendor/rowbot/idna/README.md",
+      "bytes": 13633,
+      "sha256": "e4067e630c6b41b28df4d65c39ea24919ebd50fcb2112847e12a89cc893c95f0"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/Builder.php",
+      "bytes": 2412,
+      "sha256": "909cc34157bef96873ae0b9b98de6c5f5256c222457ae523abea249a0b4adf6c"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/IdnaDataBuilder.php",
+      "bytes": 3787,
+      "sha256": "67d30f304c53f5789edfcba0461ff20c1944013cf042750d5eea0e98c9ec85d4"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/RegexBuilder.php",
+      "bytes": 7753,
+      "sha256": "608f47766e001243c113a74bf857c52bf5ca4e9727d6d77655cc3d7efb50caf1"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/ViramaDataBuilder.php",
+      "bytes": 1285,
+      "sha256": "6339397171177e9023e95868a08febfa8b1e41342faa7c5a0549b65325d0f6f7"
+    },
+    {
+      "path": "vendor/rowbot/idna/bin/generateDataFiles.php",
+      "bytes": 913,
+      "sha256": "7ad0ba925e96a18f1735592a26f0c4f7a331f6a4a873addd1a0e1930b031936d"
+    },
+    {
+      "path": "vendor/rowbot/idna/composer.json",
+      "bytes": 1434,
+      "sha256": "2e6c229fd6b2d4b44bb6edabd383a6e8ca7fb04ca20535751a47db6c0aba6803"
+    },
+    {
+      "path": "vendor/rowbot/idna/phpstan.neon",
+      "bytes": 225,
+      "sha256": "61ae623a25fc0ff0274468f96757a358dcc160da2bb4534d9de900d920f7ddbc"
+    },
+    {
+      "path": "vendor/rowbot/idna/phpunit.xml",
+      "bytes": 663,
+      "sha256": "6444ab9f4cbc18b52bf106f90363026ed0c3207664c4d11a3dca5a7e70d00071"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/DisallowedRanges.php",
+      "bytes": 8488,
+      "sha256": "cddba2f55f18b456a5e3e499282b3533dc86b26786b49072aa7fd6afac1fafc1"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/Regex.php",
+      "bytes": 95649,
+      "sha256": "3e08de953f17ca2a3e11b66b55124da56cdc07809be34a2468f67e593cb37bc4"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/deviation.php",
+      "bytes": 117,
+      "sha256": "b2c5a99c51c897ff7610738325602eb61a770f35144ead5df333e3d836741a02"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/disallowed.php",
+      "bytes": 46980,
+      "sha256": "b412f810317c6ea5ef04ea763f0f8c0db6433803012d9b5dd1a5d9842182a9ab"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/ignored.php",
+      "bytes": 4998,
+      "sha256": "beabcbe920304bb3e76c14c55c5769157bf17bf54bf73a947b524920c06f2edd"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/mapped.php",
+      "bytes": 101291,
+      "sha256": "2d49e11303acf9e5f5be385ecadaf0cce8c0060bf1bbf5ea8802aa13c22974df"
+    },
+    {
+      "path": "vendor/rowbot/idna/resources/virama.php",
+      "bytes": 868,
+      "sha256": "ad7cd02d3810928425d1f54360b16c429f9805bccf8d3c4c7cc358af86e0d614"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/CodePoint.php",
+      "bytes": 2875,
+      "sha256": "ef7b283807e42ca4aca793256dda2409424b4efa2f0bcade37c2329f34e850ec"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/CodePointStatus.php",
+      "bytes": 2104,
+      "sha256": "9f0738e5f4f13e2ced56b79d9c9efd0934e16374da36e1e90e5fb83011dc5010"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/DomainInfo.php",
+      "bytes": 1751,
+      "sha256": "2cf7f6486b50d96da36bacb4f4dcf7d8e59e4719378e53450137d97f7ff1d4c6"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/Idna.php",
+      "bytes": 10125,
+      "sha256": "18103edad5e13775808204930e2aa658b9d7b8c64aec155d7468747f30d3421d"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/IdnaResult.php",
+      "bytes": 1005,
+      "sha256": "fe368fa73cda2004bd44002e0e4f95eee5b23444082f72857f734eefab6a54f7"
+    },
+    {
+      "path": "vendor/rowbot/idna/src/LabelValidator.php",
+      "bytes": 8843,
+      "sha256": "a902452adb3a7ae14156d31a7ef3899f33ec53186dad469c5b82fa2372065f6b"
+    },
+    {
+      "path": "vendor/rowbot/idna/tests/IdnaV2Test.php",
+      "bytes": 6520,
+      "sha256": "869fc761220aa85e4ae08804db0a5ead54ff52d1b30a9376d65fa2a5fe5c43a7"
+    },
+    {
+      "path": "vendor/rowbot/idna/tests/IdnaV2TestCase.php",
+      "bytes": 6670,
+      "sha256": "6c7e81d5a640ccaee71e9d8903a42ac4874e2b2dfdd90a57c40d58adec87a755"
+    },
+    {
+      "path": "vendor/rowbot/punycode/CHANGELOG.md",
+      "bytes": 473,
+      "sha256": "f2518ee00805adbd123dcbee90524a4133db7392cf4180926d91495a8aa6967c"
+    },
+    {
+      "path": "vendor/rowbot/punycode/LICENSE",
+      "bytes": 1073,
+      "sha256": "067e9ea6499a1f9ad033f2d5e3909c83be51d55fa416d4bab913894f19ab68d3"
+    },
+    {
+      "path": "vendor/rowbot/punycode/README.md",
+      "bytes": 3507,
+      "sha256": "9d4ef9247e270921ffb3a00df0a77854e0124e834f8b1a16a94226420c11fdaa"
+    },
+    {
+      "path": "vendor/rowbot/punycode/composer.json",
+      "bytes": 1117,
+      "sha256": "82eea8105ec7cbfce60798a19831a5d7dedf3a20986d700b2adb4988bd847763"
+    },
+    {
+      "path": "vendor/rowbot/punycode/phpstan.neon",
+      "bytes": 174,
+      "sha256": "d3006eb78feb9b019806a834cdc894a7a6a5e6fdc73ad25c2e414ae243de5c56"
+    },
+    {
+      "path": "vendor/rowbot/punycode/phpunit.xml",
+      "bytes": 757,
+      "sha256": "5a3bfd70f6a6b8fe6ecb422214ac77f08f5e2a6ea1424d8faff0308d2f1f048b"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Exception/InvalidInputException.php",
+      "bytes": 163,
+      "sha256": "c1da93a3ac09db3ab7ae10801f24a80bb883972aa8fd1f6846aad4817322725c"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Exception/OutputSizeExceededException.php",
+      "bytes": 169,
+      "sha256": "90dc95cb5614ff3318872aa5482e164eed2be933bee548099880ab616277a771"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Exception/OverflowException.php",
+      "bytes": 165,
+      "sha256": "8a3f6d811d0593b4ad4217b0a11eb40d45335a3993e9542e55f3c8cdda5ca329"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Exception/PunycodeException.php",
+      "bytes": 166,
+      "sha256": "31c31b2bbcfbff34b3269f5f17d54b9399124723850d3c71eae7384fa91ab823"
+    },
+    {
+      "path": "vendor/rowbot/punycode/src/Punycode.php",
+      "bytes": 13312,
+      "sha256": "203d2f20bca87ecfe419d6ae33e141a1d24ad044ee892fda2a6deb2a39f46979"
+    },
+    {
+      "path": "vendor/rowbot/punycode/tests/PunycodeTest.php",
+      "bytes": 5112,
+      "sha256": "5094250c483713c7d7fa1420c6369a5101d7af669aefb6832da95ca52ee66739"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Iconv.php",
+      "bytes": 20887,
+      "sha256": "d7c1f0d64aa9e76241ddfb7c39bf86214c5f1985fead28eb546ef7ee8f7abbd4"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/LICENSE",
+      "bytes": 1068,
+      "sha256": "eaa5d6e59ff1d5322ae36d3ab9124460df72d2d0c8af60a99222e8a90dcbdf31"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/README.md",
+      "bytes": 422,
+      "sha256": "e5dda08da8a299847725036682e218cb391a788496406be7169ce50d2d8fb8c5"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.big5.php",
+      "bytes": 205743,
+      "sha256": "f483a027b1d62dcf3243b4c57998eaef66a0cf6b2ba75f5be5966242af1666ce"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp037.php",
+      "bytes": 3307,
+      "sha256": "e66609d756c6bbd0f05d7fd59fd6a581a54b9aa315a2fb1ba7a988ff569dd363"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp1006.php",
+      "bytes": 3388,
+      "sha256": "a30b11f7ba2676cb6ffca1c504137e3173e0f75a856dfcc6b95bd9bbc80fd9ee"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp1026.php",
+      "bytes": 3307,
+      "sha256": "e83b727ef375b122cbb6e5c6ac5cde3830f894ff01f04778d951f713a8e976ba"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp424.php",
+      "bytes": 2814,
+      "sha256": "0b7bc6052cbeb659694d99e7f3243af161c2f6b1493d0d97fc4cbffea9f00fbc"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp437.php",
+      "bytes": 3369,
+      "sha256": "e23a55ddcfbf31b114ac8a37b14814ebea2a23261ac10ffbb51e6582e34125b9"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp500.php",
+      "bytes": 3307,
+      "sha256": "a23223303a3c3d8ef850e168fd62758d21bef2e9ae305cc7682fcb20eda6346c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp737.php",
+      "bytes": 3362,
+      "sha256": "82c681d35e919beeecc244da7f1971f3f8297f7260badf7df696b4f561bbd73a"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp775.php",
+      "bytes": 3343,
+      "sha256": "dd3bb893a8623634daf87152d71dabd710d7c45a3b2460de20a8d3ddd9b84a74"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp850.php",
+      "bytes": 3337,
+      "sha256": "15564e759e45ab4799d3e06c55391c599def7a5ed5778e76064d7199732c8a82"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp852.php",
+      "bytes": 3336,
+      "sha256": "4d61ec20cfb9e6f739884391ee4ba3f6b1adc94d97e7abd3f8d99cf3f64bfd1c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp855.php",
+      "bytes": 3337,
+      "sha256": "5141df2c3ae0fb39ad442d6f7bcd5c87e82caabb2220fbc53e685cdf99d1cb07"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp856.php",
+      "bytes": 2804,
+      "sha256": "f91d2a0d141f36d561077ddf92d265b3cd3cd958648c7726058affce5fd56b45"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp857.php",
+      "bytes": 3297,
+      "sha256": "c51b9a463a67dd97f11179b24b476d2faea4e2b67c566f444224d23c1ef3ffb4"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp860.php",
+      "bytes": 3368,
+      "sha256": "492236d6a386483dd03246103161d4260dbe0c460a21196491bcda4a4ed46a3d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp861.php",
+      "bytes": 3369,
+      "sha256": "2cf9b4b7e31edf6e90617b321679dd1b9e6eb9177a582afb34fe7df4a49e23e2"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp862.php",
+      "bytes": 3369,
+      "sha256": "b3a5fc4fac20f51650123be4b926f03f60ac90c561fc553b727b054175240316"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp863.php",
+      "bytes": 3369,
+      "sha256": "00c6bed8eb856f1f225fd640aebf91ba7a65f0c928d3cd9f065f39b7f6ebb4dc"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp864.php",
+      "bytes": 3319,
+      "sha256": "316518cfc96e9472919df91e836e8410cd51ad3068ef560c78a03206b72e71d6"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp865.php",
+      "bytes": 3369,
+      "sha256": "c6d1317da71b8ea1460d3fe95904db6db9b00b15f4c0cc2faaf351542db2db26"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp866.php",
+      "bytes": 3359,
+      "sha256": "3ecb0131e8c3c03c7b630a409a1423949f8d0facd218aad7d9d6660a59af94d1"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp869.php",
+      "bytes": 3222,
+      "sha256": "b87830341131214e4d0604ae87fab3d38f359e49616632b3db1da984a976a411"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp874.php",
+      "bytes": 3000,
+      "sha256": "785a3b18c087e717b818cd38cf55e59d6de9879072f280af11b9c9a09cd8410a"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp875.php",
+      "bytes": 3304,
+      "sha256": "97bd294ae85a1a1272f51ce22f598e6e80c06c6634828b718548c783a930c7a8"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp932.php",
+      "bytes": 118305,
+      "sha256": "face7b72ea5909060949ebc5070615279e635a2b75a1a426265540edd3cfff0f"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp936.php",
+      "bytes": 328483,
+      "sha256": "8ccb6742adf6ce3c8ef25101fc10f3c1fbf0598faf1e5ecc2ceb126c7e7b880b"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp949.php",
+      "bytes": 257192,
+      "sha256": "b1092ceb17c20473be1b19e3d1e5a33ed23b0347a86c0f35640a7983d0a94a6c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.cp950.php",
+      "bytes": 204214,
+      "sha256": "e8e266700234da612b8704fd31461d68b02cc9e65041101824367ef0d64564b0"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-1.php",
+      "bytes": 3307,
+      "sha256": "5fd9dc7c40630652961b9f8a52a369e49a18902a8ab5ded8b214460070c805f0"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-10.php",
+      "bytes": 3308,
+      "sha256": "a8886388aff23b9e2e8d9f502b8a929b5bef7b5eb60eaebbdb5b08326dbcba0c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-11.php",
+      "bytes": 3290,
+      "sha256": "fdb401741ca49e04b3a87d5520e2fdec1c7f38ac85e5347596181340f492f357"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-13.php",
+      "bytes": 3311,
+      "sha256": "dee8acf47a65f70bd756ac9d53c032773a7fac7740b6b09d2ece18e67a5a40d5"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-14.php",
+      "bytes": 3329,
+      "sha256": "61058986693ba45e294ad14c2f217d5cbd889675044ea3ab5a64dae02e982292"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-15.php",
+      "bytes": 3308,
+      "sha256": "4e753e522104682df23767861a9be5991781f81e7ec14e6f27e1c0cbd4a16611"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-16.php",
+      "bytes": 3310,
+      "sha256": "6fa13336cb242ceee7ef088a7d7d7f86536426e350007a949a078b21d8b99d48"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-2.php",
+      "bytes": 3307,
+      "sha256": "21272f5172f2020985912cfea1192c9a71b8b6f541da1762b7a8300ff094cb06"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-3.php",
+      "bytes": 3216,
+      "sha256": "1dd8670f702ec6982e7ac38c0bdf12fa0b85ea050923660d9c7ceee91ffdf517"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-4.php",
+      "bytes": 3307,
+      "sha256": "4b20777490e03e7b1b8cba385eb99e35977c6b41facd8039aa0bc7251d0433c2"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-5.php",
+      "bytes": 3308,
+      "sha256": "b1b0a3c05316764449af8bac3bf7a91a3ab80b89be92ebbbf1c7b5cbd7e7919f"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-6.php",
+      "bytes": 2722,
+      "sha256": "8f5cfc3c3123adf417a8250d5ca61643d2f850753a4cf582004504d5a91d75fd"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-7.php",
+      "bytes": 3232,
+      "sha256": "efa6e35cc9cce13a92563bd44356e9e5f791b50d57a0c6c1a488c809d8fe59de"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-8.php",
+      "bytes": 2842,
+      "sha256": "f1c8bf4dacf7e2c45ffbbaf1cc38a9580d23d2f4ecc9ac859a70bbea5a8e5134"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.iso-8859-9.php",
+      "bytes": 3307,
+      "sha256": "4c9157ce9acb4256a07e7a2f3392d58b3ae5f99c48d64804d536976ea4cb9e0d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.koi8-r.php",
+      "bytes": 3363,
+      "sha256": "4c4a6ab2ea22d0f191a4de36a29f10dff25ecf38ea747d78035b1e2b41c26d3e"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.koi8-u.php",
+      "bytes": 3355,
+      "sha256": "cf2ac218c5ce64f55b5edb07ca1cf9fc4d590161fb47bfafdac062f3bf283cbe"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.us-ascii.php",
+      "bytes": 1643,
+      "sha256": "4de47035cb48b2e2f6da01be4929a5dfc241aab82bc6828aff03e923ee92a744"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1250.php",
+      "bytes": 3259,
+      "sha256": "1d79177e0886b0d58de2873cdf9691884e562a360b484327887bc17c2521cc5e"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1251.php",
+      "bytes": 3312,
+      "sha256": "bf7d71458b2d653479f7f5784699a66a1c8a50045766c5c10e01b8cc3c9d21f6"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1252.php",
+      "bytes": 3259,
+      "sha256": "952b4329f55a69872d01e9b0eaae80cc7981263d5b1ab95f99c0e56b89673342"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1253.php",
+      "bytes": 3104,
+      "sha256": "517b8840cc3c9889810a38f39cf741ac22f136503d99e9eea9f7b0c45f866b20"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1254.php",
+      "bytes": 3233,
+      "sha256": "e999414fb96049822aed64d494815bfdee006ca155fd5ff755c763991819bcb9"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1255.php",
+      "bytes": 3028,
+      "sha256": "f7cccf68e74007600d4db866973d3092ed242263bdbf552de73287109cedd2f3"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1256.php",
+      "bytes": 3328,
+      "sha256": "c00a95d42cf444c233a26ab536ec4f5668a4c46726a24a4d759d378926225892"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1257.php",
+      "bytes": 3168,
+      "sha256": "1f7f2e23b785e7d3b6324f37acf0eddd5516681c4ef46a8c833ac2f74d997477"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/from.windows-1258.php",
+      "bytes": 3208,
+      "sha256": "5b4deb34bac8a96c6cabc3b4ee214843fa3ac06dbfe77d74176ead620ba4b5c3"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/Resources/charset/translit.php",
+      "bytes": 72774,
+      "sha256": "594171482153ff8d98d315702b49a5d6df0e1278d3a7cd1cdb1ba19730ed97c6"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/bootstrap.php",
+      "bytes": 5623,
+      "sha256": "ae3a8982e35692669decf7ea58426b8894761c716a26de05a45ee36230ed9cc6"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/bootstrap80.php",
+      "bytes": 6217,
+      "sha256": "f3420d2e0423f8d15fd04d90355aad2069a0ca7dc3d833f6eadbf732ff3879df"
+    },
+    {
+      "path": "vendor/symfony/polyfill-iconv/composer.json",
+      "bytes": 1099,
+      "sha256": "a9cacbc0e8124dd03c040b95079f3a48b64f8b3e4a5cdb0cd8fca998b64f73de"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/LICENSE",
+      "bytes": 1068,
+      "sha256": "eaa5d6e59ff1d5322ae36d3ab9124460df72d2d0c8af60a99222e8a90dcbdf31"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Normalizer.php",
+      "bytes": 11707,
+      "sha256": "d597a34121c4ddb3baeb5d21300128d9fc39160c38f7b8482581861253a3f041"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/README.md",
+      "bytes": 432,
+      "sha256": "e88d64931fb6459ae33c4c35213323d5c0621c5ec2f921d00e8ec7011c46eb2c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/stubs/Normalizer.php",
+      "bytes": 450,
+      "sha256": "02cc632e832736ee409d2a1572dc7c5b5703b5311a4fc2337ab2faf925bb7777"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/canonicalComposition.php",
+      "bytes": 18111,
+      "sha256": "55a0a8e911a5758817824d05e5991633ce14fa2ecb98a6315fdb3c5c561ef05b"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/canonicalDecomposition.php",
+      "bytes": 39527,
+      "sha256": "223172b4357bc6c39509d8d92d024353e7b1bcbff113236c3bb2162ae91d169d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/combiningClass.php",
+      "bytes": 15188,
+      "sha256": "f1cf1c08b68023b1a0be5ca54cff024f82d61bec0eb304e1ec0d2761f2e84076"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/compatibilityDecomposition.php",
+      "bytes": 69745,
+      "sha256": "a186701ee29ecebadff2d68e389455cf860c6ef886910724e7f115094ee10e85"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/rawCanonicalDecomposition.php",
+      "bytes": 39111,
+      "sha256": "6c6639cc6aec0b3b7eeda5d400ee4fdd4eb43a14d8bb47c840fc14e69b502274"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/Resources/unidata/rawCompatibilityDecomposition.php",
+      "bytes": 69195,
+      "sha256": "d19410433b30649cc00cdd3b1b39336a5b3bf20615e837652a276eb32e9d9e37"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/UNICODE-LICENSE.txt",
+      "bytes": 1995,
+      "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/bootstrap.php",
+      "bytes": 1345,
+      "sha256": "1a49cf65a2abe8ff2596325999f1f21a48ee6d24a67db6db15caff8fc5e99926"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/bootstrap80.php",
+      "bytes": 1347,
+      "sha256": "0bd53e1b62dc924e79c68ed9768278704ebd824242dca48049b83dce7adcef3e"
+    },
+    {
+      "path": "vendor/symfony/polyfill-intl-normalizer/composer.json",
+      "bytes": 1181,
+      "sha256": "a3fcb2113895d2e2b867164863953dd2683ca5bb97c15b9d9ac3383596ac454b"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/LICENSE",
+      "bytes": 1068,
+      "sha256": "eaa5d6e59ff1d5322ae36d3ab9124460df72d2d0c8af60a99222e8a90dcbdf31"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Mbstring.php",
+      "bytes": 59041,
+      "sha256": "95a93ff2687ca033ca6bab3b952c27685217c26c7a36642a386285159f63d9ba"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/README.md",
+      "bytes": 370,
+      "sha256": "7686ab9250b91f0b706d6a5aac4e6bbf4b8865ec323bbb420343f19e98d91d14"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/caseFolding.php",
+      "bytes": 1984,
+      "sha256": "10e9a1a4dbb75d94062d175eb8ed78d3d8f5d37da098fb4cd5b4fc9b310f6ef6"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/eastAsianWidthRegexp.php",
+      "bytes": 2061,
+      "sha256": "439ea421ac8d3fea3524def8c2a4e82c9e58cb16d0b2ae44aabad9c0274e053c"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/lowerCase.php",
+      "bytes": 21795,
+      "sha256": "8c978540a9e53a07be1c7c4c9d8b3d67c5cc466a0598cf74c6a527a56b6f2420"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/titleCase.php",
+      "bytes": 2219,
+      "sha256": "595a75f8c38d7cb732809c51c3dd3012a698b4740b6370a75ec4302d0428636d"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/titleCaseRegexp.php",
+      "bytes": 6246,
+      "sha256": "4f4ca37a0fd9b6dd9adebc679b517f856e0eb6f4841f8dfaa0a5c1d0fb284855"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/Resources/unidata/upperCase.php",
+      "bytes": 23394,
+      "sha256": "7cf01c0b8e4876034a43c7162be2719fd8fd945602b913386e657a499d16b763"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/bootstrap.php",
+      "bytes": 411,
+      "sha256": "a3d673e2e37b6186ac2ff0b836c2aac64a1b50e0d42dbca57012ca46382d4bc9"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/bootstrap72.php",
+      "bytes": 12546,
+      "sha256": "6b98dd38ea11b04bdf78f34909cf4d1a073fd57ba492013bebef5e6fea165159"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/bootstrap80.php",
+      "bytes": 14058,
+      "sha256": "9a34156cc87be08bb27ba08280574e6f25d33dc7e15e7197c76ea9b9b5769ba9"
+    },
+    {
+      "path": "vendor/symfony/polyfill-mbstring/composer.json",
+      "bytes": 1143,
+      "sha256": "5aa62fd262848629aba2d7c40d5a45c17fb690397da5414c0bbde627ebfff5ff"
+    }
+  ]
+}

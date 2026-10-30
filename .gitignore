@@ -1,4 +1,4 @@
 .artifacts/
 .tmp/
 node_modules/
-vendor/
+/vendor/

@@ -1,0 +1,381 @@
+{
+  "packages": [
+    {
+      "name": "rowbot/idna",
+      "version": "0.3.0",
+      "version_normalized": "0.3.0.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/TRowbotham/idna.git",
+        "reference": "504900acc8e465a17668a61ae30391d1aebbb4f2"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/TRowbotham/idna/zipball/504900acc8e465a17668a61ae30391d1aebbb4f2",
+        "reference": "504900acc8e465a17668a61ae30391d1aebbb4f2",
+        "shasum": ""
+      },
+      "require": {
+        "ext-mbstring": "*",
+        "php": ">=8.1",
+        "rowbot/punycode": "^1.0",
+        "symfony/polyfill-intl-normalizer": "^1.18"
+      },
+      "require-dev": {
+        "guzzlehttp/guzzle": "^6.5 || ^7.0",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^10.0 || ^11.0 || ^12.0",
+        "squizlabs/php_codesniffer": "^3.7.1",
+        "symfony/cache": "^5.0 || ^6.0 || ^7.0"
+      },
+      "time": "2025-09-19T00:30:13+00:00",
+      "type": "library",
+      "installation-source": "dist",
+      "autoload": {
+        "psr-4": {
+          "DiscussionBridge\\CmsV4\\IdnaVendor\\Rowbot\\Idna\\": "src/",
+          "DiscussionBridge\\CmsV4\\IdnaVendor\\Rowbot\\Idna\\Resource\\": "resources/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Trevor Rowbotham"
+        }
+      ],
+      "description": "An implementation of UTS#46 Unicode IDNA Compatibility Processing.",
+      "keywords": [
+        "idn",
+        "idna",
+        "international domain names",
+        "iri",
+        "tr46",
+        "unicode",
+        "uts46"
+      ],
+      "support": {
+        "issues": "https://github.com/TRowbotham/idna/issues",
+        "source": "https://github.com/TRowbotham/idna/tree/0.3.0"
+      },
+      "install-path": "../rowbot/idna"
+    },
+    {
+      "name": "rowbot/punycode",
+      "version": "1.0.4",
+      "version_normalized": "1.0.4.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/TRowbotham/punycode.git",
+        "reference": "ec116e99cb089a25d45147813d61bfa2deb29328"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/TRowbotham/punycode/zipball/ec116e99cb089a25d45147813d61bfa2deb29328",
+        "reference": "ec116e99cb089a25d45147813d61bfa2deb29328",
+        "shasum": ""
+      },
+      "require": {
+        "php": ">=7.1"
+      },
+      "require-dev": {
+        "ext-mbstring": "*",
+        "phpstan/phpstan": "^1.2",
+        "phpstan/phpstan-deprecation-rules": "^1.0",
+        "phpstan/phpstan-strict-rules": "^1.0",
+        "phpunit/phpunit": "^7.0 || ^8.0 || ^9.0",
+        "squizlabs/php_codesniffer": "^3.5.1"
+      },
+      "time": "2024-05-03T00:56:10+00:00",
+      "type": "library",
+      "installation-source": "dist",
+      "autoload": {
+        "psr-4": {
+          "DiscussionBridge\\CmsV4\\IdnaVendor\\Rowbot\\Punycode\\": "src/"
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Trevor Rowbotham",
+          "homepage": "https://trowbotham.com",
+          "role": "Developer"
+        }
+      ],
+      "description": "A Bootstring encoding of Unicode for Internationalized Domain Names in Applications (IDNA).",
+      "keywords": [
+        "punycode",
+        "rfc-3492",
+        "rfc3492"
+      ],
+      "support": {
+        "issues": "https://github.com/TRowbotham/punycode/issues",
+        "source": "https://github.com/TRowbotham/punycode/tree/1.0.4"
+      },
+      "install-path": "../rowbot/punycode"
+    },
+    {
+      "name": "symfony/polyfill-iconv",
+      "version": "v1.43.0",
+      "version_normalized": "1.43.0.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/symfony/polyfill-iconv.git",
+        "reference": "254724d95fe01b679cd97d88786e9623ee00bfb7"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/symfony/polyfill-iconv/zipball/254724d95fe01b679cd97d88786e9623ee00bfb7",
+        "reference": "254724d95fe01b679cd97d88786e9623ee00bfb7",
+        "shasum": ""
+      },
+      "require": {
+        "php": ">=7.2"
+      },
+      "provide": {
+        "ext-iconv": "*"
+      },
+      "suggest": {
+        "ext-iconv": "For best performance"
+      },
+      "time": "2026-09-29T06:25:14+00:00",
+      "type": "library",
+      "extra": {
+        "thanks": {
+          "url": "https://github.com/symfony/polyfill",
+          "name": "symfony/polyfill"
+        }
+      },
+      "installation-source": "dist",
+      "autoload": {
+        "psr-4": {
+          "DiscussionBridge\\CmsV4\\IdnaVendor\\Symfony\\Polyfill\\Iconv\\": ""
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Nicolas Grekas",
+          "email": "p@tchwork.com"
+        },
+        {
+          "name": "Symfony Community",
+          "homepage": "https://symfony.com/contributors"
+        }
+      ],
+      "description": "Symfony polyfill for the Iconv extension",
+      "homepage": "https://symfony.com",
+      "keywords": [
+        "compatibility",
+        "iconv",
+        "polyfill",
+        "portable",
+        "shim"
+      ],
+      "support": {
+        "source": "https://github.com/symfony/polyfill-iconv/tree/v1.43.0"
+      },
+      "funding": [
+        {
+          "url": "https://symfony.com/sponsor",
+          "type": "custom"
+        },
+        {
+          "url": "https://github.com/fabpot",
+          "type": "github"
+        },
+        {
+          "url": "https://github.com/nicolas-grekas",
+          "type": "github"
+        },
+        {
+          "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+          "type": "tidelift"
+        }
+      ],
+      "install-path": "../symfony/polyfill-iconv"
+    },
+    {
+      "name": "symfony/polyfill-intl-normalizer",
+      "version": "v1.43.0",
+      "version_normalized": "1.43.0.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/symfony/polyfill-intl-normalizer.git",
+        "reference": "ebd57ccc7edb93d632e184efbe7693d2517bab3b"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/symfony/polyfill-intl-normalizer/zipball/ebd57ccc7edb93d632e184efbe7693d2517bab3b",
+        "reference": "ebd57ccc7edb93d632e184efbe7693d2517bab3b",
+        "shasum": ""
+      },
+      "require": {
+        "php": ">=7.2"
+      },
+      "suggest": {
+        "ext-intl": "For best performance"
+      },
+      "time": "2026-09-23T22:02:09+00:00",
+      "type": "library",
+      "extra": {
+        "thanks": {
+          "url": "https://github.com/symfony/polyfill",
+          "name": "symfony/polyfill"
+        }
+      },
+      "installation-source": "dist",
+      "autoload": {
+        "psr-4": {
+          "DiscussionBridge\\CmsV4\\IdnaVendor\\Symfony\\Polyfill\\Intl\\Normalizer\\": ""
+        },
+        "classmap": [
+          "Resources/stubs"
+        ]
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Nicolas Grekas",
+          "email": "p@tchwork.com"
+        },
+        {
+          "name": "Symfony Community",
+          "homepage": "https://symfony.com/contributors"
+        }
+      ],
+      "description": "Symfony polyfill for intl's Normalizer class and related functions",
+      "homepage": "https://symfony.com",
+      "keywords": [
+        "compatibility",
+        "intl",
+        "normalizer",
+        "polyfill",
+        "portable",
+        "shim"
+      ],
+      "support": {
+        "source": "https://github.com/symfony/polyfill-intl-normalizer/tree/v1.43.0"
+      },
+      "funding": [
+        {
+          "url": "https://symfony.com/sponsor",
+          "type": "custom"
+        },
+        {
+          "url": "https://github.com/fabpot",
+          "type": "github"
+        },
+        {
+          "url": "https://github.com/nicolas-grekas",
+          "type": "github"
+        },
+        {
+          "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+          "type": "tidelift"
+        }
+      ],
+      "install-path": "../symfony/polyfill-intl-normalizer"
+    },
+    {
+      "name": "symfony/polyfill-mbstring",
+      "version": "v1.43.3",
+      "version_normalized": "1.43.3.0",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/symfony/polyfill-mbstring.git",
+        "reference": "122889ed24dc000165bcbfd77ec412f15cbdfc6a"
+      },
+      "dist": {
+        "type": "zip",
+        "url": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/122889ed24dc000165bcbfd77ec412f15cbdfc6a",
+        "reference": "122889ed24dc000165bcbfd77ec412f15cbdfc6a",
+        "shasum": ""
+      },
+      "require": {
+        "ext-iconv": "*",
+        "php": ">=7.2"
+      },
+      "provide": {
+        "ext-mbstring": "*"
+      },
+      "suggest": {
+        "ext-mbstring": "For best performance"
+      },
+      "time": "2026-10-28T09:35:49+00:00",
+      "type": "library",
+      "extra": {
+        "thanks": {
+          "url": "https://github.com/symfony/polyfill",
+          "name": "symfony/polyfill"
+        }
+      },
+      "installation-source": "dist",
+      "autoload": {
+        "psr-4": {
+          "DiscussionBridge\\CmsV4\\IdnaVendor\\Symfony\\Polyfill\\Mbstring\\": ""
+        }
+      },
+      "notification-url": "https://packagist.org/downloads/",
+      "license": [
+        "MIT"
+      ],
+      "authors": [
+        {
+          "name": "Nicolas Grekas",
+          "email": "p@tchwork.com"
+        },
+        {
+          "name": "Symfony Community",
+          "homepage": "https://symfony.com/contributors"
+        }
+      ],
+      "description": "Symfony polyfill for the Mbstring extension",
+      "homepage": "https://symfony.com",
+      "keywords": [
+        "compatibility",
+        "mbstring",
+        "polyfill",
+        "portable",
+        "shim"
+      ],
+      "support": {
+        "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.43.3"
+      },
+      "funding": [
+        {
+          "url": "https://symfony.com/sponsor",
+          "type": "custom"
+        },
+        {
+          "url": "https://github.com/fabpot",
+          "type": "github"
+        },
+        {
+          "url": "https://github.com/nicolas-grekas",
+          "type": "github"
+        },
+        {
+          "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+          "type": "tidelift"
+        }
+      ],
+      "install-path": "../symfony/polyfill-mbstring"
+    }
+  ],
+  "dev": false,
+  "dev-package-names": []
+}

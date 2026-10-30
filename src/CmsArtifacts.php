@@ -7,14 +7,12 @@ namespace DiscussionBridge\WordPress;
 use DiscussionBridge\CmsV4\Codec;
 use stdClass;
 
-require_once __DIR__ . '/private/cms-v4/CmsCodec.php';
-
 /** One current development SDK; bindings describe installed bytes, never publication authority. */
 final class CmsArtifacts
 {
-    public const CANDIDATE = 'discussionbridge-v4-core-20261025-r6';
-    public const CODEC_SHA256 = '6eece074e1268d2d90890afd0215da80c06c23961b497a4df190f7876af0fc19';
-    public const SCHEMA_SHA256 = '8563a9b1346e3bf82635bd65a46bb1e25415a1003d7432f8fcb8c1c6e4f03c14';
+    public const CANDIDATE = 'discussionbridge-v4-core-20261029-r7';
+    public const CODEC_SHA256 = '9ff58c7e9547167bc8f546483c040daa0232cad171ddd48c15f8b9c821294ed7';
+    public const SCHEMA_SHA256 = 'e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0';
 
     public static function codec(): Codec
     {
@@ -22,6 +20,7 @@ final class CmsArtifacts
             || hash_file('sha256', __DIR__ . '/private/cms-v4/cms-schema.json') !== self::SCHEMA_SHA256) {
             throw new \RuntimeException('The installed CMS development artifact does not match its recorded bytes.');
         }
+        require_once __DIR__ . '/private/cms-v4/CmsCodec.php';
         return new Codec(__DIR__ . '/private/cms-v4/cms-schema.json');
     }
 

@@ -135,7 +135,8 @@ function ar_attention_native(bool $applied = true): array {
 }
 
 function ar_recovery_mocks(stdClass $connection): void {
-    mock('V4-32', (object) ['protocol_revision' => 'attention-recovery-1', 'candidate_id' => CmsArtifacts::CANDIDATE,
+    // This feature revision is distinct from the overall SDK build candidate.
+    mock('V4-32', (object) ['protocol_revision' => 'attention-recovery-1', 'candidate_id' => 'discussionbridge-v4-core-20261025-r6',
         'inspection_profiles' => [CmsAttentionRecovery::PROFILE]]);
     mock('V4-33', (object) ['items' => [], 'next_after' => 0, 'has_more' => false], 200, 'after=0');
     mock('V4-35', (object) ['items' => [], 'next_after' => 0, 'has_more' => false], 200, 'after=0');

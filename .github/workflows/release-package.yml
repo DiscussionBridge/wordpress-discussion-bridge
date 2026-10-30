@@ -30,11 +30,17 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: dom, openssl
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
       - name: Run all declared PHP fixture suites
         run: |
           php tests/run.php
           php tests/integration.php
           php tests/source-url-proof.php
+          php tests/contract-runtime.php
+          php -n tests/contract-runtime.php
+          node --test tests/contract-integrity.test.mjs
       - name: Validate PHP syntax
         run: find . -path ./.git -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
 
@@ -59,6 +65,8 @@ jobs:
         run: |
           npm run check
           npm run test:browser
+          npm run test:browser:real
+          node --test tests/browser-build-ownership.test.mjs
       - name: Verify bundled asset freshness
         run: |
           npm run build
@@ -92,6 +100,7 @@ jobs:
           if ($first.sha256 -cne $second.sha256) { throw 'V4 package bytes differ between checkouts' }
           & ./scripts/verify-release.ps1 -Path $first.path
           & ./scripts/verify-release.ps1 -Path $second.path
+          & ./scripts/test-package.ps1 -Path $first.path
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: wordpress-discussion-bridge-${{ github.sha }}

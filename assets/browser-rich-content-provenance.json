@@ -11,11 +11,11 @@
       "license": "MIT"
     },
     "katex": {
-      "version": "0.16.47",
+      "version": "0.18.2",
       "license": "MIT"
     },
     "dompurify": {
-      "version": "3.4.14",
+      "version": "3.4.17",
       "license": "(MPL-2.0 OR Apache-2.0)"
     }
   },
@@ -640,9 +640,9 @@
     },
     {
       "name": "dompurify",
-      "version": "3.4.14",
+      "version": "3.4.17",
       "license": "(MPL-2.0 OR Apache-2.0)",
-      "file": "THIRD_PARTY_LICENSES/dompurify_3.4.14.txt",
+      "file": "THIRD_PARTY_LICENSES/dompurify_3.4.17.txt",
       "bytes": 11358,
       "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
     },
@@ -680,9 +680,9 @@
     },
     {
       "name": "katex",
-      "version": "0.16.47",
+      "version": "0.18.2",
       "license": "MIT",
-      "file": "THIRD_PARTY_LICENSES/katex_0.16.47.txt",
+      "file": "THIRD_PARTY_LICENSES/katex_0.18.2.txt",
       "bytes": 1107,
       "sha256": "766ccc1f306c885aa45542a9846bbd0a505b27a0374f146778171c2254ce18e3"
     },
@@ -768,22 +768,22 @@
   ],
   "inputs": {
     "package-lock.json": {
-      "bytes": 60242,
-      "sha256": "64e001034e6360d8f2309bf6710107941ab807df68c2acd978d648aae320cb72"
+      "bytes": 60719,
+      "sha256": "7d66c229f56fdd8b52a0bc7d4c847d55d7bb5977aef35a1987b668cc60cc20bd"
     },
     "resources/js/browser-rich-content.mjs": {
       "bytes": 1973,
       "sha256": "7408737f3b96117426835cff8d9b93ef3ee1378f1338147cba5b419a6d72f653"
     },
     "scripts/build-browser-rich-content.mjs": {
-      "bytes": 4702,
-      "sha256": "fc1f017d2fa7862a0e38df1aa208ff6d4a8538c6e5043481250c294aecb72a96"
+      "bytes": 7274,
+      "sha256": "a00b45981a9a3877bcd56246a4541cf6b68c1e913ad12ec034d8ac221f504bc9"
     }
   },
   "outputs": {
     "discussionbridge-rich-content.js": {
-      "bytes": 4912194,
-      "sha256": "342096ae21476227c72d2a0748f2d7aaa16cd70dc9e2fad833ffcc97d09aaf89"
+      "bytes": 4915393,
+      "sha256": "ca9bc41c13731a4b8bff091eb46f0737258c8d4a11219994c0f7946840ade99e"
     }
   }
 }

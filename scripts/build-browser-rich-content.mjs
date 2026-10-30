@@ -8,7 +8,31 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dependencyRoot = process.env.DISCUSSIONBRIDGE_BUILD_DEPENDENCY_ROOT ?? root;
 const output = path.resolve(root, process.env.DISCUSSIONBRIDGE_BUILD_OUTPUT_DIR ?? "assets");
 if (!output.startsWith(`${root}${path.sep}`)) throw new Error("Build output must remain inside the WordPress component.");
+let existingParent = output;
+while (!fs.existsSync(existingParent)) existingParent = path.dirname(existingParent);
+const physicalRelative = path.relative(fs.realpathSync(root), fs.realpathSync(existingParent));
+if (physicalRelative === ".." || physicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(physicalRelative)) throw new Error("Renderer output escaped through a linked parent.");
+for (const directory of [output, path.join(output, "THIRD_PARTY_LICENSES")]) {
+  if (fs.existsSync(directory) && fs.lstatSync(directory).isSymbolicLink()) throw new Error("Linked renderer output is prohibited.");
+}
 fs.mkdirSync(output, { recursive: true });
+const previousProvenance = path.join(output, "browser-rich-content-provenance.json");
+if (fs.existsSync(previousProvenance) && fs.lstatSync(previousProvenance).isSymbolicLink()) throw new Error("Linked renderer provenance is prohibited.");
+const previousNotices = fs.existsSync(previousProvenance) ? JSON.parse(fs.readFileSync(previousProvenance, "utf8")).bundledPackages ?? [] : [];
+const verifyPreviousNotice = previous => {
+  if (!/^THIRD_PARTY_LICENSES\/[A-Za-z0-9_.-]+\.txt$/.test(previous.file)) throw new Error("Unsafe previous renderer notice.");
+  const file = path.join(output, previous.file);
+  if (!fs.existsSync(file)) return null;
+  const stat = fs.lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink()) throw new Error("Linked/non-file previous renderer notice; preserve it.");
+  const bytes = fs.readFileSync(file);
+  if (bytes.length !== previous.bytes || createHash("sha256").update(bytes).digest("hex") !== previous.sha256) throw new Error("Modified previous renderer notice; preserve and reconcile it.");
+  return file;
+};
+// Refuse changed recorded inputs before replacing any generated output.
+for (const previous of previousNotices) verifyPreviousNotice(previous);
+const bundleTarget = path.join(output, "discussionbridge-rich-content.js");
+if (fs.existsSync(bundleTarget) && fs.lstatSync(bundleTarget).isSymbolicLink()) throw new Error("Linked renderer bundle is prohibited.");
 const require = createRequire(import.meta.url);
 const { build } = require(require.resolve("esbuild", { paths: [dependencyRoot] }));
 const fontInputs = new Map();
@@ -54,6 +78,7 @@ for (const input of Object.keys(result.metafile.inputs)) {
           const relative = `THIRD_PARTY_LICENSES/${key.replace(/[^a-zA-Z0-9_.-]/g, "_")}.txt`;
           fs.mkdirSync(path.join(output, "THIRD_PARTY_LICENSES"), { recursive: true });
           const target = path.join(output, relative);
+          if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink()) throw new Error("Linked renderer notice is prohibited.");
           fs.writeFileSync(target, text);
           notices.set(key, { name: metadata.name, version: metadata.version, license: metadata.license, file: relative, ...digest(target) });
         }
@@ -62,6 +87,14 @@ for (const input of Object.keys(result.metafile.inputs)) {
     }
     directory = path.dirname(directory);
   }
+}
+// Remove only obsolete files owned by the preceding generated ledger, and only
+// while their exact bytes still match it. Never prune arbitrary operator files.
+const currentNotices = new Set([...notices.values()].map(item => item.file));
+for (const previous of previousNotices) {
+  if (currentNotices.has(previous.file)) continue;
+  const file = verifyPreviousNotice(previous);
+  if (file) fs.unlinkSync(file);
 }
 fs.writeFileSync(path.join(output, "browser-rich-content-provenance.json"), `${JSON.stringify({
   format: 1, build: "npm ci && npm run build", dependencies,

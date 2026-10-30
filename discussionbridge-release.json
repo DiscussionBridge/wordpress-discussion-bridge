@@ -1,9 +1,20 @@
 {
-  "family": {"name": "DiscussionBridge", "version": "0.4.0-alpha.1"},
-  "component": {"name": "DiscussionBridge for WordPress", "version": "0.4.0-alpha.1"},
+  "family": {
+    "name": "DiscussionBridge",
+    "version": "0.4.0-alpha.1"
+  },
+  "component": {
+    "name": "DiscussionBridge for WordPress",
+    "version": "0.4.0-alpha.1"
+  },
   "wire_version": "v4",
-  "candidate_id": "discussionbridge-v4-core-20261025-r6",
+  "candidate_id": "discussionbridge-v4-core-20261029-r7",
   "release_version": null,
   "buildStatus": "implementation_candidate_not_exact_approved_not_frozen",
-  "contract": {"schema_sha256": "8563a9b1346e3bf82635bd65a46bb1e25415a1003d7432f8fcb8c1c6e4f03c14", "php_sha256": "6eece074e1268d2d90890afd0215da80c06c23961b497a4df190f7876af0fc19"}
+  "contract": {
+    "schema_sha256": "e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0",
+    "php_sha256": "9ff58c7e9547167bc8f546483c040daa0232cad171ddd48c15f8b9c821294ed7",
+    "normative_sha256": "808042688cbde88fac0acdf1187e4cb8c251e13025bfcf09cf3a3c361ca02003",
+    "php_dependencies_sha256": "5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e"
+  }
 }

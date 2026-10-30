@@ -6,5 +6,5 @@
   "license": "MIT",
   "require": { "php": ">=8.1", "ext-json": "*", "ext-openssl": "*", "ext-dom": "*" },
   "autoload": { "psr-4": { "DiscussionBridge\\WordPress\\": "src/" } },
-  "scripts": { "test": ["php tests/run.php", "php tests/integration.php", "php tests/source-url-proof.php"] }
+  "scripts": { "test": ["php tests/run.php", "php tests/integration.php", "php tests/source-url-proof.php", "php tests/contract-runtime.php"] }
 }

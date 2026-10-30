@@ -1,4 +1,7 @@
 * text=auto eol=lf
+# Pinned upstream runtime/fixture members must retain their exact source bytes.
+src/private/cms-v4/** -text
+tests/fixtures/cms-v4/** -text
 
 /.gitattributes export-ignore
 /.gitignore export-ignore

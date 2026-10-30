@@ -1,6 +1,39 @@
 # DiscussionBridge WordPress V4 development
 
-Implementation/package version: `0.4.0-alpha.1`. Wire: V4. This is an unpublished development component for candidate `discussionbridge-v4-core-20261025-r6`; release version is null. It has no release, formal review or installed-native qualification disposition.
+Implementation/package version: `0.4.0-alpha.1`. Wire: V4. This is an unpublished development component paired to candidate `discussionbridge-v4-core-20261029-r7`; release version is null. This pairing has no independent adapter review or installed-native qualification disposition yet. Dated earlier development sections describe their original batches, not current acceptance.
+
+## Complete package and maintainer checks
+
+Operators install the ordinary WordPress ZIP. Its private PHP runtime includes the exact shared codec, schema, URL/IDNA dependencies, autoloader and license files; no server-side Composer install or additional PHP extension is needed for that runtime. The adapter's existing PHP 8.1 minimum and JSON, OpenSSL and DOM requirements remain unchanged. `src/private/cms-v4/PROVENANCE.json` identifies the frozen shared commit and every bundled member. Those facts do not grant native-post ownership or migrate retained publication state.
+
+Maintainers refresh only from the reviewed shared checkout at `b90348f9f010ff58fbe52237eda3187c926334ec`:
+
+```sh
+node scripts/refresh-contract.mjs /path/to/reviewed/adapter-contract
+npm ci
+npm run check
+npm run build
+npm run test:browser
+npm run test:browser:real
+php tests/run.php
+php tests/integration.php
+php tests/source-url-proof.php
+php tests/contract-runtime.php
+php -n tests/contract-runtime.php
+node --test tests/contract-integrity.test.mjs
+```
+
+The real-browser test uses installed Chrome, or the explicit `DISCUSSIONBRIDGE_BROWSER_EXECUTABLE` path, in a fresh headless context. It does not use an operator's browser profile. The normal renderer build bundles local fonts and third-party notices. It removes only obsolete generated notices whose names and bytes still match the previous generated ledger; modified or unrecognized files are not swept away.
+
+Build and check the normal ZIP with PowerShell 7. Use a new output name for each build; the builder refuses to overwrite an existing artifact:
+
+```powershell
+$package = ./scripts/build-release.ps1 -OutputName 'wordpress-v4-candidate.zip' | ConvertFrom-Json
+./scripts/verify-release.ps1 -Path $package.path
+./scripts/test-package.ps1 -Path $package.path -PhpBinary /path/to/php
+```
+
+Verification checks every packaged byte against its source ledger, the complete private dependency closure, browser inputs/outputs and notices. The extracted-package check runs the actual shipped runtime with optional PHP extensions disabled. CI separately checks PHP 8.1/8.3/8.5, Node 22/24, renderer freshness, and identical ZIP bytes from two clean checkouts. These are package and fixture checks, not evidence of an installed WordPress/MySQL/cron workflow.
 
 ## Attention recovery and local synchronization (r6)
 

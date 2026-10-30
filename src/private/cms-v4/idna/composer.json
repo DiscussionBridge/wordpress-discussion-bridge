@@ -1,0 +1,29 @@
+{
+  "name": "discussionbridge/cms-v4-idna",
+  "description": "Locked input for the private V4 PHP IDNA dependency bundle; not a host application installer.",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.1",
+    "rowbot/idna": "0.3.0",
+    "rowbot/punycode": "1.0.4",
+    "symfony/polyfill-iconv": "1.43.0",
+    "symfony/polyfill-intl-normalizer": "1.43.0",
+    "symfony/polyfill-mbstring": "1.43.3"
+  },
+  "config": {
+    "allow-plugins": {},
+    "platform": {
+      "php": "8.1.0",
+      "ext-iconv": false,
+      "ext-intl": false,
+      "ext-mbstring": false
+    },
+    "sort-packages": true
+  },
+  "autoload": {
+    "files": [
+      "bridge.php"
+    ]
+  }
+}
