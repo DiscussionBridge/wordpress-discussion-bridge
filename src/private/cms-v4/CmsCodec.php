@@ -33,7 +33,7 @@ final class InvalidNumericValue {}
 final class Codec
 {
     public const SCHEMA_SHA256 = 'e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0';
-    public const IDNA_SHA256 = '5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e';
+    public const IDNA_SHA256 = '478d6e5c8f96255f7124e5bd0d28f79975d4b8466fea097ef2edb2fb1151c282';
     public const IMPLEMENTATION_VERSION = '0.4.0-alpha.1';
     public const CANDIDATE_ID = 'discussionbridge-v4-core-20261029-r7';
     public const WIRE_VERSION = 'v4';
@@ -76,7 +76,7 @@ final class Codec
         }
         $manifest = json_decode($bytes, true, 512, JSON_THROW_ON_ERROR);
         // The exact trusted manifest identifies every runtime member, including
-        // Composer's loader, classes, Unicode data and upstream licenses.
+        // Private bootstrap, classes, Unicode data and upstream licenses.
         foreach ($manifest['members'] as $member) {
             $content = @file_get_contents($base . $member['path']);
             if ($content === false || strlen($content) !== $member['bytes'] || hash('sha256', $content) !== $member['sha256']) {

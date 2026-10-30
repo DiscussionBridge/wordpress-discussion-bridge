@@ -2,6 +2,7 @@
   "format": 1,
   "component": "discussionbridge-v4-private-idna",
   "namespace": "DiscussionBridge\\CmsV4\\IdnaVendor",
+  "bootstrap_identity": "ccd4e7c048763f284be65e9def040a0194e3439f38088d261ca232edca7edce8",
   "php_minimum": "8.1",
   "additional_mandatory_extensions": [],
   "runtime_packages": [
@@ -107,9 +108,14 @@
       "sha256": "5ad4772b1aaad5db05c14d1034dbb5d66de676213d90bc1db700a0361c659273"
     },
     {
+      "path": "implementation/php-idna-autoload.php.in",
+      "bytes": 979,
+      "sha256": "f7d9a707fabc1fda69f75dd4c64a378fcf2a09ac1f261b12f209f01d196ee98e"
+    },
+    {
       "path": "scripts/build-php-idna.mjs",
-      "bytes": 10279,
-      "sha256": "82f01421e243dd0b7becca90e3b26a1bf2daff46e80055888dbda96ba91c08e6"
+      "bytes": 12532,
+      "sha256": "5f59d98e7c00cd0a23e82d5052ca333c810f9241b952ce3ff1974793ea5a25f4"
     },
     {
       "path": "tools/unicode17/INPUTS.json",
@@ -163,7 +169,8 @@
     "replace exactly one source-hashed ContextJ method with current-occurrence UTF8 byte-offset validation, including virama advancement",
     "disable package-global polyfill bootstrap; add two explicit-UTF8 private bridges",
     "regenerate six private NFC/data maps with unchanged pinned Symfony compiler and official Unicode17 inputs; preserve both licenses",
-    "regenerate ordinary authoritative Composer autoload from scoped package metadata"
+    "regenerate authoritative class map from scoped package metadata; bind private Composer helper consistently",
+    "use closed private bootstrap without registering global Composer engine or package metadata"
   ],
   "upstream_members": [
     {
@@ -855,8 +862,8 @@
     },
     {
       "path": "vendor/autoload.php",
-      "bytes": 771,
-      "sha256": "ee1ae5d4c6e2d946c8a3dc1bbae0b3b88c38b804d120790b34451c86bd564d94"
+      "bytes": 1023,
+      "sha256": "c5afc42bd8da50260f59691b38db3be669bcef3b511c09a615f9ecf89ffc070c"
     },
     {
       "path": "vendor/composer/ClassLoader.php",
@@ -875,8 +882,8 @@
     },
     {
       "path": "vendor/composer/autoload_classmap.php",
-      "bytes": 2576,
-      "sha256": "b31dc5d363ed70fc225bb3bc69573a3baa289b54eb49b30147bd1ca7523adb76"
+      "bytes": 2613,
+      "sha256": "6f7b74e14f5e7323646d6f0e249da2471ab426688830b0be3d5da0c345039de2"
     },
     {
       "path": "vendor/composer/autoload_files.php",
@@ -900,8 +907,8 @@
     },
     {
       "path": "vendor/composer/autoload_static.php",
-      "bytes": 5052,
-      "sha256": "cdc57381fc5412f5d2d18b739f959f8c8b9f5842593065c62636add5195f7a44"
+      "bytes": 5089,
+      "sha256": "b5a207a340db973632023bb63cba885123057b5fda1847ec49488778ab0b9c31"
     },
     {
       "path": "vendor/composer/installed.json",

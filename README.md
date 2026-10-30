@@ -6,7 +6,7 @@ Implementation/package version: `0.4.0-alpha.1`. Wire: V4. This is an unpublishe
 
 Operators install the ordinary WordPress ZIP. Its private PHP runtime includes the exact shared codec, schema, URL/IDNA dependencies, autoloader and license files; no server-side Composer install or additional PHP extension is needed for that runtime. The adapter's existing PHP 8.1 minimum and JSON, OpenSSL and DOM requirements remain unchanged. `src/private/cms-v4/PROVENANCE.json` identifies the frozen shared commit and every bundled member. Those facts do not grant native-post ownership or migrate retained publication state.
 
-Maintainers refresh only from the reviewed shared checkout at `b90348f9f010ff58fbe52237eda3187c926334ec`:
+Maintainers refresh only from the reviewed shared checkout at `09d77c0209835c2d996aad294d161f167c7bd838`:
 
 ```sh
 node scripts/refresh-contract.mjs /path/to/reviewed/adapter-contract

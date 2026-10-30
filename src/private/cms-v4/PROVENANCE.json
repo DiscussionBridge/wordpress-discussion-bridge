@@ -6,15 +6,15 @@
   "status": "implementation_candidate_not_exact_approved_not_frozen",
   "source": {
     "repository": "https://github.com/DiscussionBridge/discussionbridge-adapter-contract",
-    "commit": "b90348f9f010ff58fbe52237eda3187c926334ec"
+    "commit": "09d77c0209835c2d996aad294d161f167c7bd838"
   },
   "normative_sha256": "808042688cbde88fac0acdf1187e4cb8c251e13025bfcf09cf3a3c361ca02003",
-  "dependency_manifest_sha256": "5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e",
+  "dependency_manifest_sha256": "478d6e5c8f96255f7124e5bd0d28f79975d4b8466fea097ef2edb2fb1151c282",
   "members": [
     {
       "path": "CmsCodec.php",
       "bytes": 56195,
-      "sha256": "9ff58c7e9547167bc8f546483c040daa0232cad171ddd48c15f8b9c821294ed7"
+      "sha256": "502df4f0324ac9b65c0068f1025d71290d149522e98a29382763816f01a20555"
     },
     {
       "path": "cms-schema.json",
@@ -23,8 +23,8 @@
     },
     {
       "path": "idna/DEPENDENCIES.json",
-      "bytes": 57494,
-      "sha256": "5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e"
+      "bytes": 57885,
+      "sha256": "478d6e5c8f96255f7124e5bd0d28f79975d4b8466fea097ef2edb2fb1151c282"
     },
     {
       "path": "idna/bridge.php",
@@ -43,8 +43,8 @@
     },
     {
       "path": "idna/vendor/autoload.php",
-      "bytes": 771,
-      "sha256": "ee1ae5d4c6e2d946c8a3dc1bbae0b3b88c38b804d120790b34451c86bd564d94"
+      "bytes": 1023,
+      "sha256": "c5afc42bd8da50260f59691b38db3be669bcef3b511c09a615f9ecf89ffc070c"
     },
     {
       "path": "idna/vendor/composer/ClassLoader.php",
@@ -63,8 +63,8 @@
     },
     {
       "path": "idna/vendor/composer/autoload_classmap.php",
-      "bytes": 2576,
-      "sha256": "b31dc5d363ed70fc225bb3bc69573a3baa289b54eb49b30147bd1ca7523adb76"
+      "bytes": 2613,
+      "sha256": "6f7b74e14f5e7323646d6f0e249da2471ab426688830b0be3d5da0c345039de2"
     },
     {
       "path": "idna/vendor/composer/autoload_files.php",
@@ -88,8 +88,8 @@
     },
     {
       "path": "idna/vendor/composer/autoload_static.php",
-      "bytes": 5052,
-      "sha256": "cdc57381fc5412f5d2d18b739f959f8c8b9f5842593065c62636add5195f7a44"
+      "bytes": 5089,
+      "sha256": "b5a207a340db973632023bb63cba885123057b5fda1847ec49488778ab0b9c31"
     },
     {
       "path": "idna/vendor/composer/installed.json",

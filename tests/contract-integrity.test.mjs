@@ -25,7 +25,7 @@ for (const fault of ["intact", "codec", "schema", "dependency-manifest", "autolo
       if (fault === "autoload") fs.appendFileSync(path.join(privateRoot,"idna/vendor/autoload.php"),injection);
       if (fault === "missing-license") fs.unlinkSync(path.join(privateRoot,"idna/vendor/rowbot/idna/LICENSE"));
       const program = path.join(temporary,"probe.php");
-      fs.writeFileSync(program, `<?php require __DIR__ . '/src/CmsArtifacts.php'; $c = \\DiscussionBridge\\WordPress\\CmsArtifacts::codec(); $c->validate('Url', 'https://é.example/'); echo 'loaded';`);
+      fs.writeFileSync(program, `<?php require __DIR__ . '/src/CmsArtifacts.php'; $c = \\DiscussionBridge\\WordPress\\CmsArtifacts::codec(); $c->validate('Url', 'https://é.example/'); for ($i=0;$i<3;++$i) { if (class_exists('Composer\\\\InstalledVersions')) throw new RuntimeException('Private SDK exposed global Composer'); } if (class_exists('Composer\\\\Autoload\\\\ClassLoader',false)) throw new RuntimeException('Private SDK installed global Composer engine'); echo 'loaded';`);
       const result = spawnSync(php,["-n",program],{encoding:"utf8",windowsHide:true,timeout:20000});
       assert.equal(result.error,undefined,result.error?.message);
       assert.equal(result.status,fault === "intact" ? 0 : 255,result.stderr || result.stdout);

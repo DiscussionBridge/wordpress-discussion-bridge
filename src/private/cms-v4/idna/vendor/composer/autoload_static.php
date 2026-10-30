@@ -50,7 +50,7 @@ class ComposerStaticInit9a2bedc68bc5621c7767c27ad27c2018
     );
 
     public static $classMap = array (
-        'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'DiscussionBridge\\CmsV4\\IdnaVendor\\Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'DiscussionBridge\\CmsV4\\IdnaVendor\\Normalizer' => __DIR__ . '/..' . '/symfony/polyfill-intl-normalizer/Resources/stubs/Normalizer.php',
         'DiscussionBridge\\CmsV4\\IdnaVendor\\Rowbot\\Idna\\CodePoint' => __DIR__ . '/..' . '/rowbot/idna/src/CodePoint.php',
         'DiscussionBridge\\CmsV4\\IdnaVendor\\Rowbot\\Idna\\CodePointStatus' => __DIR__ . '/..' . '/rowbot/idna/src/CodePointStatus.php',

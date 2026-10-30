@@ -13,8 +13,8 @@
   "buildStatus": "implementation_candidate_not_exact_approved_not_frozen",
   "contract": {
     "schema_sha256": "e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0",
-    "php_sha256": "9ff58c7e9547167bc8f546483c040daa0232cad171ddd48c15f8b9c821294ed7",
+    "php_sha256": "502df4f0324ac9b65c0068f1025d71290d149522e98a29382763816f01a20555",
     "normative_sha256": "808042688cbde88fac0acdf1187e4cb8c251e13025bfcf09cf3a3c361ca02003",
-    "php_dependencies_sha256": "5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e"
+    "php_dependencies_sha256": "478d6e5c8f96255f7124e5bd0d28f79975d4b8466fea097ef2edb2fb1151c282"
   }
 }

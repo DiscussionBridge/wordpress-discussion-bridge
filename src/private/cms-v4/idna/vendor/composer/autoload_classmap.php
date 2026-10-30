@@ -6,7 +6,7 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
+    'DiscussionBridge\\CmsV4\\IdnaVendor\\Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'DiscussionBridge\\CmsV4\\IdnaVendor\\Normalizer' => $vendorDir . '/symfony/polyfill-intl-normalizer/Resources/stubs/Normalizer.php',
     'DiscussionBridge\\CmsV4\\IdnaVendor\\Rowbot\\Idna\\CodePoint' => $vendorDir . '/rowbot/idna/src/CodePoint.php',
     'DiscussionBridge\\CmsV4\\IdnaVendor\\Rowbot\\Idna\\CodePointStatus' => $vendorDir . '/rowbot/idna/src/CodePointStatus.php',

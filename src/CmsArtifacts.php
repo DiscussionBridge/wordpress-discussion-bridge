@@ -11,7 +11,7 @@ use stdClass;
 final class CmsArtifacts
 {
     public const CANDIDATE = 'discussionbridge-v4-core-20261029-r7';
-    public const CODEC_SHA256 = '9ff58c7e9547167bc8f546483c040daa0232cad171ddd48c15f8b9c821294ed7';
+    public const CODEC_SHA256 = '502df4f0324ac9b65c0068f1025d71290d149522e98a29382763816f01a20555';
     public const SCHEMA_SHA256 = 'e6a15a6d70f7bc8b8ee82aa22a0b9c2ff1bbf2da6277f7087118be9e026ce5c0';
 
     public static function codec(): Codec
