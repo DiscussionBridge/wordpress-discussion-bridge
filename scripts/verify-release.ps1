@@ -34,7 +34,7 @@ try {
     if ($dbSeen.Count + 1 -ne $dbMembers.Count) { throw 'Unlisted package member' }
     foreach ($dbRequired in @('wordpress-discussion-bridge.php', 'discussionbridge-release.json', 'BACKUP_RESTORE.md', 'SOURCE_URL_MOVES.md',
         'composer.json', 'package.json', 'package-lock.json', 'resources/js/browser-rich-content.mjs',
-        'scripts/build-browser-rich-content.mjs', 'scripts/build-release.ps1', 'scripts/verify-release.ps1',
+        'scripts/build-browser-rich-content.mjs', 'scripts/bundled-license.mjs', 'scripts/managed-output.mjs', 'scripts/build-release.ps1', 'scripts/verify-release.ps1',
         'tests/run.php', 'tests/bootstrap.php', 'tests/integration.php', 'tests/integration-bootstrap.php',
         'src/CmsArtifacts.php', 'src/CmsCoordinator.php', 'src/CmsSourcePublisher.php', 'src/NativeWriter.php',
         'src/CmsSourceMove.php', 'src/CmsSourceOwnership.php', 'src/CmsSourceNativeMove.php', 'src/CmsSourceArticleProfile.php', 'src/CmsSourcePublicVerifier.php',
@@ -139,7 +139,10 @@ try {
             [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($dbBytes)).ToLowerInvariant() -cne $dbNotice.sha256) {
             throw "Renderer notice mismatch: $($dbNotice.file)"
         }
+        if ($dbNotice.licenseSource.extraction -notin @('whole-file','pinned-license-section') -or $dbNotice.licenseSource.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Renderer notice lacks actual source provenance' }
     }
+    $dbFastDom = @($dbProvenance.bundledPackages | Where-Object { $_.name -ceq 'fastdom' })
+    if ($dbFastDom.Count -ne 1 -or $dbFastDom[0].version -cne '1.0.12' -or $dbFastDom[0].sha256 -cne 'df2ae14f12f31864acef768195afe4584b08a257f25925f49884619279f02f37' -or $dbFastDom[0].licenseSource.sha256 -cne 'cc5669ab6f7741bb061c8a7244addc8e3af1f84ec7d2445744b59d0169a87d11') { throw 'Missing/incomplete actual FastDom notice' }
     [ordered]@{ path=[IO.Path]::GetFullPath($Path); version=$dbManifest.version; members=$dbMembers.Count;
         renderer_inputs=@($dbProvenance.inputs.PSObject.Properties).Count; notices=@($dbProvenance.bundledPackages).Count;
         sha256=(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() } | ConvertTo-Json

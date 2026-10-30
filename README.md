@@ -15,6 +15,7 @@ npm run check
 npm run build
 npm run test:browser
 npm run test:browser:real
+node --test tests/browser-build-ownership.test.mjs tests/maintainer-guards.test.mjs
 php tests/run.php
 php tests/integration.php
 php tests/source-url-proof.php
@@ -23,7 +24,7 @@ php -n tests/contract-runtime.php
 node --test tests/contract-integrity.test.mjs
 ```
 
-The real-browser test uses installed Chrome, or the explicit `DISCUSSIONBRIDGE_BROWSER_EXECUTABLE` path, in a fresh headless context. It does not use an operator's browser profile. The normal renderer build bundles local fonts and third-party notices. It removes only obsolete generated notices whose names and bytes still match the previous generated ledger; modified or unrecognized files are not swept away.
+The real-browser test uses installed Chrome, or the explicit `DISCUSSIONBRIDGE_BROWSER_EXECUTABLE` path, in a fresh headless context. It does not use an operator's browser profile. The normal renderer build bundles local fonts and third-party notices. It stages output until actual license sources and managed destinations have passed preflight; an unavailable required license is an error, not a metadata-only permission notice. It removes only obsolete generated notices whose names and bytes still match the previous generated ledger; modified or unrecognized files are not swept away. File/directory link tests run on Linux CI; Windows reports explicit file-link privilege skips where necessary.
 
 Build and check the normal ZIP with PowerShell 7. Use a new output name for each build; the builder refuses to overwrite an existing artifact:
 

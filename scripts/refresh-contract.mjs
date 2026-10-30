@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { managedOutput } from "./managed-output.mjs";
 
 if (process.argv.length !== 3) throw new Error("Usage: node scripts/refresh-contract.mjs <reviewed-contract-root>");
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -16,6 +17,29 @@ const pins = {
   idna: "5f9b6bf922e65ed4fee1c7ebad807d266140a2fc262fdd452da607f0cfd40e1e",
 };
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+const fixturePins = {
+  "positive-examples.json":"b3ea942e9fe6b824ab2a0af5f4eecf46b672d544856fea53929d60a359225b30",
+  "url-domain-policy.json":"e6fa88694fe1142f8754c2e50cbee752a9755d63324247aaa9db465450d5672e",
+  "url-contextj.json":"5cf9aee605cd002a75d929da35fe0f6bcb99b2dd83a78a71751dc24b95adadd8",
+};
+const target = path.join(root, "src/private/cms-v4");
+for (const name of ["src", "src/private", "src/private/cms-v4", "src/private/cms-v4/idna", "tests", "tests/fixtures", "tests/fixtures/cms-v4"]) managedOutput(root, path.join(root, name), "directory");
+for (const name of ["src/CmsArtifacts.php", "discussionbridge-release.json", ...Object.keys(fixturePins).map(name => `tests/fixtures/cms-v4/${name}`)]) managedOutput(root, path.join(root, name));
+for (const name of ["PROVENANCE.json", "CmsCodec.php", "cms-schema.json"]) managedOutput(root, path.join(target, name));
+// Fail on unusable target metadata even before reading the selected source.
+// Dynamic dependency destinations are checked below, before the first write.
+const wrapper = path.join(root,"src/CmsArtifacts.php");
+let text = fs.readFileSync(wrapper,"utf8");
+for (const [name,value] of [["CANDIDATE",pins.candidate],["CODEC_SHA256",pins.codec],["SCHEMA_SHA256",pins.schema]]) {
+  const pattern = new RegExp(`public const ${name} = '[^']*';`,"g");
+  if ([...text.matchAll(pattern)].length !== 1) throw new Error(`Ambiguous component pin: ${name}`);
+  text = text.replace(pattern,`public const ${name} = '${value}';`);
+}
+const releaseFile = path.join(root,"discussionbridge-release.json");
+const release = JSON.parse(fs.readFileSync(releaseFile,"utf8"));
+if (!release || typeof release !== "object" || Array.isArray(release)) throw new Error("Invalid component release metadata");
+release.candidate_id = pins.candidate;
+release.contract = {schema_sha256:pins.schema,php_sha256:pins.codec,normative_sha256:pins.normative,php_dependencies_sha256:pins.idna};
 const safe = name => typeof name === "string" && /^[A-Za-z0-9_./-]+$/.test(name)
   && !name.startsWith("/") && !name.split("/").some(part => ["", ".", ".."].includes(part));
 function read(name, expected) {
@@ -59,23 +83,9 @@ for (const item of dependencies.members) {
 const expected = new Set([...members.keys()].filter(name => name.startsWith("idna/")).map(name => name.slice(5)));
 const actual = inventory(path.join(source, "src/php/idna"));
 if (actual.length !== expected.size || actual.some(name => !expected.has(name))) throw new Error("Private dependency inventory mismatch");
-const fixturePins = {
-  "positive-examples.json":"b3ea942e9fe6b824ab2a0af5f4eecf46b672d544856fea53929d60a359225b30",
-  "url-domain-policy.json":"e6fa88694fe1142f8754c2e50cbee752a9755d63324247aaa9db465450d5672e",
-  "url-contextj.json":"5cf9aee605cd002a75d929da35fe0f6bcb99b2dd83a78a71751dc24b95adadd8",
-};
 const fixtures = Object.entries(fixturePins).map(([name,sha]) => ({name, bytes:read(`fixtures/${name}`,sha)}));
-const target = path.join(root, "src/private/cms-v4");
-for (const name of ["src", "src/private", "src/private/cms-v4", "src/CmsArtifacts.php", "discussionbridge-release.json", "tests", "tests/fixtures", "tests/fixtures/cms-v4", ...fixtures.map(({name}) => `tests/fixtures/cms-v4/${name}`)]) {
-  const file = path.join(root,name);
-  if (fs.existsSync(file) && fs.lstatSync(file).isSymbolicLink()) throw new Error("Linked managed target directory");
-}
 for (const name of ["PROVENANCE.json", ...members.keys()]) {
-  let at = target;
-  for (const part of name.split("/")) {
-    at = path.join(at, part);
-    if (fs.existsSync(at) && fs.lstatSync(at).isSymbolicLink()) throw new Error("Linked component target");
-  }
+  managedOutput(root, path.join(target, name));
 }
 if (fs.existsSync(path.join(target, "idna")) && inventory(path.join(target, "idna")).some(name => !expected.has(name))) throw new Error("Reconcile unmanaged old private members before refreshing");
 for (const [name, bytes] of members) {
@@ -97,17 +107,6 @@ for (const {name,bytes} of fixtures) {
   fs.mkdirSync(path.join(root,"tests/fixtures/cms-v4"),{recursive:true});
   fs.writeFileSync(path.join(root,"tests/fixtures/cms-v4",name),bytes);
 }
-const wrapper = path.join(root,"src/CmsArtifacts.php");
-let text = fs.readFileSync(wrapper,"utf8");
-for (const [name,value] of [["CANDIDATE",pins.candidate],["CODEC_SHA256",pins.codec],["SCHEMA_SHA256",pins.schema]]) {
-  const pattern = new RegExp(`public const ${name} = '[^']*';`,"g");
-  if ([...text.matchAll(pattern)].length !== 1) throw new Error(`Ambiguous component pin: ${name}`);
-  text = text.replace(pattern,`public const ${name} = '${value}';`);
-}
 fs.writeFileSync(wrapper,text);
-const releaseFile = path.join(root,"discussionbridge-release.json");
-const release = JSON.parse(fs.readFileSync(releaseFile,"utf8"));
-release.candidate_id = pins.candidate;
-release.contract = {schema_sha256:pins.schema,php_sha256:pins.codec,normative_sha256:pins.normative,php_dependencies_sha256:pins.idna};
 fs.writeFileSync(releaseFile,JSON.stringify(release,null,2)+"\n");
 console.log(JSON.stringify({candidate:pins.candidate,private_members:members.size,fixtures:fixtures.length,source_commit:pins.commit}));

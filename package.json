@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-browser-rich-content.mjs",
-    "check": "node --check resources/js/browser-rich-content.mjs && node --check scripts/build-browser-rich-content.mjs",
+    "check": "node --check resources/js/browser-rich-content.mjs && node --check scripts/build-browser-rich-content.mjs && node --check scripts/bundled-license.mjs && node --check scripts/managed-output.mjs && node --check scripts/refresh-contract.mjs",
     "test:browser": "node --test tests/browser-rich-content.test.mjs",
     "test:browser:real": "node --test tests/browser-rich-content.integration.test.mjs"
   },

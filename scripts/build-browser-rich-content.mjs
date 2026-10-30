@@ -3,27 +3,25 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { managedOutput } from "./managed-output.mjs";
+import { bundledLicense } from "./bundled-license.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dependencyRoot = process.env.DISCUSSIONBRIDGE_BUILD_DEPENDENCY_ROOT ?? root;
 const output = path.resolve(root, process.env.DISCUSSIONBRIDGE_BUILD_OUTPUT_DIR ?? "assets");
 if (!output.startsWith(`${root}${path.sep}`)) throw new Error("Build output must remain inside the WordPress component.");
-let existingParent = output;
-while (!fs.existsSync(existingParent)) existingParent = path.dirname(existingParent);
-const physicalRelative = path.relative(fs.realpathSync(root), fs.realpathSync(existingParent));
-if (physicalRelative === ".." || physicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(physicalRelative)) throw new Error("Renderer output escaped through a linked parent.");
 for (const directory of [output, path.join(output, "THIRD_PARTY_LICENSES")]) {
-  if (fs.existsSync(directory) && fs.lstatSync(directory).isSymbolicLink()) throw new Error("Linked renderer output is prohibited.");
+  managedOutput(root, directory, "directory");
 }
-fs.mkdirSync(output, { recursive: true });
 const previousProvenance = path.join(output, "browser-rich-content-provenance.json");
-if (fs.existsSync(previousProvenance) && fs.lstatSync(previousProvenance).isSymbolicLink()) throw new Error("Linked renderer provenance is prohibited.");
-const previousNotices = fs.existsSync(previousProvenance) ? JSON.parse(fs.readFileSync(previousProvenance, "utf8")).bundledPackages ?? [] : [];
+const previousStat = managedOutput(root, previousProvenance);
+const previousNotices = previousStat ? JSON.parse(fs.readFileSync(previousProvenance, "utf8")).bundledPackages ?? [] : [];
+if (!Array.isArray(previousNotices) || new Set(previousNotices.map(item => item.file)).size !== previousNotices.length) throw new Error("Invalid previous renderer notice ledger");
 const verifyPreviousNotice = previous => {
   if (!/^THIRD_PARTY_LICENSES\/[A-Za-z0-9_.-]+\.txt$/.test(previous.file)) throw new Error("Unsafe previous renderer notice.");
   const file = path.join(output, previous.file);
-  if (!fs.existsSync(file)) return null;
-  const stat = fs.lstatSync(file);
+  const stat = managedOutput(root, file);
+  if (!stat) return null;
   if (!stat.isFile() || stat.isSymbolicLink()) throw new Error("Linked/non-file previous renderer notice; preserve it.");
   const bytes = fs.readFileSync(file);
   if (bytes.length !== previous.bytes || createHash("sha256").update(bytes).digest("hex") !== previous.sha256) throw new Error("Modified previous renderer notice; preserve and reconcile it.");
@@ -32,7 +30,7 @@ const verifyPreviousNotice = previous => {
 // Refuse changed recorded inputs before replacing any generated output.
 for (const previous of previousNotices) verifyPreviousNotice(previous);
 const bundleTarget = path.join(output, "discussionbridge-rich-content.js");
-if (fs.existsSync(bundleTarget) && fs.lstatSync(bundleTarget).isSymbolicLink()) throw new Error("Linked renderer bundle is prohibited.");
+managedOutput(root, bundleTarget);
 const require = createRequire(import.meta.url);
 const { build } = require(require.resolve("esbuild", { paths: [dependencyRoot] }));
 const fontInputs = new Map();
@@ -54,7 +52,8 @@ const cssPlugin = {
     });
   },
 };
-const result = await build({ absWorkingDir: root, entryPoints: ["resources/js/browser-rich-content.mjs"], outfile: path.join(output, "discussionbridge-rich-content.js"), bundle: true, format: "iife", minify: true, nodePaths: [path.join(dependencyRoot, "node_modules")], metafile: true, plugins: [cssPlugin] });
+const result = await build({ absWorkingDir: root, entryPoints: [path.join(root, "resources/js/browser-rich-content.mjs")], outfile: bundleTarget, write: false, bundle: true, format: "iife", minify: true, nodePaths: [path.join(dependencyRoot, "node_modules")], metafile: true, plugins: [cssPlugin] });
+if (result.outputFiles.length !== 1 || path.resolve(result.outputFiles[0].path) !== bundleTarget) throw new Error("Unexpected renderer build output");
 const digest = file => {
   const bytes = fs.readFileSync(file);
   return { bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
@@ -64,6 +63,7 @@ const dependencies = Object.fromEntries(["esbuild", "mermaid", "katex", "dompuri
   return [name, { version: metadata.version, license: metadata.license }];
 }));
 const notices = new Map();
+const stagedNotices = new Map();
 for (const input of Object.keys(result.metafile.inputs)) {
   let directory = path.dirname(path.resolve(root, input));
   while (directory !== path.dirname(directory)) {
@@ -73,14 +73,14 @@ for (const input of Object.keys(result.metafile.inputs)) {
       if (directory !== root && typeof metadata.name === "string" && typeof metadata.version === "string") {
         const key = `${metadata.name}@${metadata.version}`;
         if (!notices.has(key)) {
-          const license = fs.readdirSync(directory).find(file => /^licen[cs]e(?:\.(?:md|txt))?$/i.test(file));
-          const text = license ? fs.readFileSync(path.join(directory, license), "utf8") : `License declared by package: ${JSON.stringify(metadata.license)}\nSource: ${JSON.stringify(metadata.repository)}\n`;
+          const license = bundledLicense(directory, metadata);
           const relative = `THIRD_PARTY_LICENSES/${key.replace(/[^a-zA-Z0-9_.-]/g, "_")}.txt`;
-          fs.mkdirSync(path.join(output, "THIRD_PARTY_LICENSES"), { recursive: true });
           const target = path.join(output, relative);
-          if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink()) throw new Error("Linked renderer notice is prohibited.");
-          fs.writeFileSync(target, text);
-          notices.set(key, { name: metadata.name, version: metadata.version, license: metadata.license, file: relative, ...digest(target) });
+          if (stagedNotices.has(target)) throw new Error("Colliding generated license names");
+          const stat = managedOutput(root, target);
+          if (stat && !previousNotices.some(item => item.file === relative) && !fs.readFileSync(target).equals(license.bytes)) throw new Error(`Unowned renderer notice; preserve it: ${relative}`);
+          stagedNotices.set(target, license.bytes);
+          notices.set(key, { name: metadata.name, version: metadata.version, license: metadata.license, file: relative, bytes: license.bytes.length, sha256: createHash("sha256").update(license.bytes).digest("hex"), licenseSource: license.licenseSource });
         }
       }
       break;
@@ -88,6 +88,12 @@ for (const input of Object.keys(result.metafile.inputs)) {
     directory = path.dirname(directory);
   }
 }
+// All dependency notices and managed destinations are valid before changing
+// the bundle or any notice. Unknown and edited owned files are never swept.
+const inputRecords = Object.fromEntries(["package-lock.json", "resources/js/browser-rich-content.mjs", "scripts/build-browser-rich-content.mjs", "scripts/bundled-license.mjs", "scripts/managed-output.mjs"].map(file => [file, digest(path.join(root, file))]));
+fs.mkdirSync(path.join(output, "THIRD_PARTY_LICENSES"), { recursive: true });
+fs.writeFileSync(bundleTarget, result.outputFiles[0].contents);
+for (const [target, bytes] of stagedNotices) fs.writeFileSync(target, bytes);
 // Remove only obsolete files owned by the preceding generated ledger, and only
 // while their exact bytes still match it. Never prune arbitrary operator files.
 const currentNotices = new Set([...notices.values()].map(item => item.file));
@@ -100,6 +106,6 @@ fs.writeFileSync(path.join(output, "browser-rich-content-provenance.json"), `${J
   format: 1, build: "npm ci && npm run build", dependencies,
   localFontInputs: Object.fromEntries([...fontInputs.entries()].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)),
   bundledPackages: [...notices.entries()].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0).map(([, value]) => value),
-  inputs: Object.fromEntries(["package-lock.json", "resources/js/browser-rich-content.mjs", "scripts/build-browser-rich-content.mjs"].map(file => [file, digest(path.join(root, file))])),
+  inputs: inputRecords,
   outputs: { "discussionbridge-rich-content.js": digest(path.join(output, "discussionbridge-rich-content.js")) },
 }, null, 2)}\n`);

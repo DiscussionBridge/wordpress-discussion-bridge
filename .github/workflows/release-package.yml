@@ -66,7 +66,7 @@ jobs:
           npm run check
           npm run test:browser
           npm run test:browser:real
-          node --test tests/browser-build-ownership.test.mjs
+          node --test tests/browser-build-ownership.test.mjs tests/maintainer-guards.test.mjs
       - name: Verify bundled asset freshness
         run: |
           npm run build

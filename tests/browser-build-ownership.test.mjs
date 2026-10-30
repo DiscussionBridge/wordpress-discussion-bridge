@@ -5,15 +5,20 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { tmpdir } from "node:os";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 test("normal renderer rebuild prunes only exact owned obsolete notices and refuses modified ones before writing", () => {
-  const scratch = path.join(root, ".tmp");
-  fs.mkdirSync(scratch, {recursive:true});
-  const output = fs.mkdtempSync(path.join(scratch, "renderer-ownership-"));
+  const scratch = tmpdir();
+  const fixture = fs.mkdtempSync(path.join(scratch, "renderer-ownership-"));
+  const output = path.join(fixture, "assets");
+  for (const name of ["scripts/build-browser-rich-content.mjs", "scripts/bundled-license.mjs", "scripts/managed-output.mjs", "resources/js/browser-rich-content.mjs", "package.json", "package-lock.json"]) {
+    fs.mkdirSync(path.dirname(path.join(fixture,name)),{recursive:true});
+    fs.copyFileSync(path.join(root,name),path.join(fixture,name));
+  }
   const run = () => spawnSync(process.execPath, ["scripts/build-browser-rich-content.mjs"], {
-    cwd:root, encoding:"utf8", timeout:90000, windowsHide:true,
-    env:{...process.env, DISCUSSIONBRIDGE_BUILD_OUTPUT_DIR:path.relative(root,output)},
+    cwd:fixture, encoding:"utf8", timeout:90000, windowsHide:true,
+    env:{...process.env, DISCUSSIONBRIDGE_BUILD_DEPENDENCY_ROOT:root, DISCUSSIONBRIDGE_BUILD_OUTPUT_DIR:"assets"},
   });
   const success = result => { assert.equal(result.error,undefined,result.error?.message); assert.equal(result.status,0,result.stderr); };
   const hash = bytes => createHash("sha256").update(bytes).digest("hex");
@@ -29,6 +34,10 @@ test("normal renderer rebuild prunes only exact owned obsolete notices and refus
   };
   try {
     success(run());
+    const fastdom = fs.readFileSync(path.join(output,"THIRD_PARTY_LICENSES/fastdom_1.0.12.txt"));
+    assert.equal(hash(fastdom),"df2ae14f12f31864acef768195afe4584b08a257f25925f49884619279f02f37");
+    const source = JSON.parse(fs.readFileSync(ledger,"utf8")).bundledPackages.find(item=>item.name==="fastdom").licenseSource;
+    assert.equal(source.extraction,"pinned-license-section");
     const unknown = path.join(output,"THIRD_PARTY_LICENSES/operator-note.txt");
     fs.writeFileSync(unknown,"Keep this unrecorded file.\n");
     addStale();
@@ -48,7 +57,7 @@ test("normal renderer rebuild prunes only exact owned obsolete notices and refus
     assert.match(fs.readFileSync(stale,"utf8"),/Operator edit/);
     assert.equal(fs.readFileSync(unknown,"utf8"),"Keep this unrecorded file.\n");
   } finally {
-    const resolved = fs.realpathSync(output);
+    const resolved = fs.realpathSync(fixture);
     assert.equal(path.dirname(resolved),fs.realpathSync(scratch));
     assert.ok(path.basename(resolved).startsWith("renderer-ownership-"));
     fs.rmSync(resolved,{recursive:true});
