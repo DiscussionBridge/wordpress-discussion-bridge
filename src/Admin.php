@@ -114,7 +114,8 @@ final class Admin
     public static function render(): void
     {
         if (!current_user_can('manage_options')) return;
-        echo '<div class="wrap"><h1>DiscussionBridge</h1>'; settings_errors();
+        // WordPress's options-page header already renders Settings API notices.
+        echo '<div class="wrap"><h1>DiscussionBridge</h1>';
         echo '<form method="post" action="options.php">'; settings_fields('discussionbridge');
         foreach ([Settings::SERVER_URL_OPTION => ['Discourse HTTPS origin', Settings::server_url()], Settings::CONNECTION_ID_OPTION => ['Content Connection', Settings::connection_id()],
             Settings::LANE_OPTION => ['Publication lane', Settings::lane()], Settings::SERVICE_AUTHOR_OPTION => ['Existing native service author username', Settings::service_author_username()]] as $key => [$label, $value]) {

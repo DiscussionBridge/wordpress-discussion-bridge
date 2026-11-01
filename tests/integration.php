@@ -1301,6 +1301,7 @@ test('source move actual independent native deletion retains captured closure an
 });
 
 require __DIR__ . '/administrator-retry.php';
+require __DIR__ . '/admin-settings-notices.php';
 require __DIR__ . '/attention-recovery.php';
 require __DIR__ . '/scheduler-recovery.php';
 require __DIR__ . '/source-move-loopback.php';
