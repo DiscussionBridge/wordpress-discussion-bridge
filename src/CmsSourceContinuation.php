@@ -100,7 +100,7 @@ final class CmsSourceContinuation
         return $bytes;
     }
 
-    private static function compare(string $left, string $right): int
+    public static function compare(string $left, string $right): int
     {
         return strlen($left) <=> strlen($right) ?: strcmp($left, $right);
     }

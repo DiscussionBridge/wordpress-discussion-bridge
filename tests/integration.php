@@ -439,6 +439,64 @@ test('genuine newer source prepares current intent while known refusedWork is ob
     expect($current->retired[0]->held->job->source->source_revision === 'source-r2');
 });
 
+test('a rejected Wiki conversion prepare is retired only after the same owned mapping corroborates the queued edit', function (): void {
+    configured(); [, $conn, $job, $state, $save] = native_job();
+    $state->lease = null; $state->lease_deadline = 0;
+    $state->receiver_scope = $conn->scope_revision . "\0" . $conn->policy->policy_revision;
+    $mapping = $job->mapping;
+    $mapping->destination_native_id = '1';
+    $mapping->mapping_state = 'pending';
+    $mapping->desired_source_revision = 'wiki-converted';
+    $state->mappings->{$mapping->source_id} = $mapping;
+    $state->mapping_complete = true;
+
+    $old = fixture('initial_feed')->items[0]; $old->source->source_revision = 'wiki-converted';
+    $old->event_sequence = '9007199254740993';
+    $new = clone $old; $new->source = clone $old->source;
+    $new->event_id = '11111111-1111-4111-8111-000000000073';
+    $new->event_sequence = '9007199254740994'; $new->source->source_revision = 'wiki-edited';
+    $feed = fixture('changes_feed'); $feed->items = [$old, $new];
+    $state->sources->stream = 'changes'; $state->sources->cursor = $feed->checkpoint_cursor;
+    $query = 'stream=changes&cursor=' . $state->sources->cursor;
+    expect($save());
+    mock('V4-01', $conn); mock('V4-08', $conn->policy); mock('V4-06', $feed, 200, $query);
+    $conflict = (object) ['outcome' => 'rejected', 'code' => 'revision_conflict', 'retryable' => false,
+        'retry_after_seconds' => null, 'correlation_id' => null, 'core_fallback' => false];
+    mock('V4-09', $conflict, 409);
+    $mapping_path = ['mapping_id' => $mapping->mapping_id];
+    mock('V4-11', $mapping, 200, '', $mapping_path);
+    $step = fn() => FromSynchronizer::serialized(fn($guard) => CmsCoordinator::step($state->scope, $guard));
+
+    $result = $step();
+    expect(is_wp_error($result) && $result->get_error_data()['code'] === 'revision_conflict');
+    $retained = (new CmsJournal())->read();
+    expect(count($retained->jobs) === 2 && $retained->retired === [] && $retained->pending->route === 'V4-09');
+    $pending = $retained->pending;
+    $empty = clone $feed; $empty->items = []; mock('V4-06', $empty, 200, $query);
+
+    $current = clone $mapping; $current->desired_source_revision = 'wiki-edited';
+    $wrong = clone $current; $wrong->destination_native_id = '121';
+    mock('V4-11', $wrong, 200, '', $mapping_path);
+    expect(is_wp_error($step()) && (new CmsJournal())->read()->pending == $pending);
+
+    mock('V4-11', $current, 200, '', $mapping_path);
+    expect($step() === 'working');
+    $retained = (new CmsJournal())->read();
+    expect($retained->pending === null && $retained->lease === null && count($retained->jobs) === 1);
+    expect($retained->jobs[0]->source->source_revision === 'wiki-edited');
+    expect($retained->retired[0]->pending == $pending && $retained->retired[0]->successor_event_id === $new->event_id);
+    expect($retained->retired[0]->rejection->code === 'revision_conflict' && $retained->retired[0]->jobs[0]->event == $old);
+
+    mock('V4-09', function ($url, $args) use ($current, $pending): array {
+        $request = json_decode($args['body']);
+        expect($request->source_revision === 'wiki-edited' && $request->canonical_url === $current->canonical_url);
+        expect($request->mutation_id !== $pending->options->body->mutation_id);
+        return dbt_response(200, $current);
+    });
+    mock('V4-13', '', 204);
+    expect($step() === 'healthy' && $GLOBALS['dbt']['inserted'] === []);
+});
+
 test('receiver supersession permits owned withdrawal without masking it with the old publish-body limitation', function (): void {
     [$conn, $job, $state, $status, $id] = held_native_case(); $status->work->state = 'superseded';
     mock('V4-14', $status, 200, '', ['work_id' => $status->work->work_id]);

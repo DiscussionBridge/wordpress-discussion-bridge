@@ -183,7 +183,9 @@ final class CmsCoordinator
             $prepared = CmsMutation::perform($client, 'V4-09', ['body' => (object) ['source_id' => $source_id,
                 'source_revision' => $job->source->source_revision, 'policy_revision' => $policy->policy_revision,
                 'external_id' => $external, 'canonical_url' => $job->plan->canonical_url]], $state, $save);
-            if (is_wp_error($prepared)) return $prepared;
+            if (is_wp_error($prepared)) {
+                return self::retire_superseded_prepare($client, $connection, $job, $state, $prepared) ? 'done' : $prepared;
+            }
             if ($prepared->connection_id !== $connection->connection_id || $prepared->source_id !== $source_id
                 || $prepared->external_id !== $external || $prepared->canonical_url !== $job->plan->canonical_url
                 || $prepared->desired_source_revision !== $job->source->source_revision
@@ -340,6 +342,47 @@ final class CmsCoordinator
             'discussionbridge_cms_transport' => 'transport_timeout',
             default => null,
         };
+    }
+
+    private static function retire_superseded_prepare(CmsClient $client, stdClass $connection, stdClass $job,
+        stdClass $state, WP_Error $error): bool
+    {
+        $data = $error->get_error_data();
+        $pending = $state->pending;
+        $mapping = $job->mapping;
+        $source = $job->source;
+        $event = $job->event ?? null;
+        if ($error->get_error_code() !== 'discussionbridge_cms_rejected' || !is_array($data)
+            || ($data['status'] ?? null) !== 409 || ($data['code'] ?? null) !== 'revision_conflict'
+            || ($data['retryable'] ?? null) !== false || ($data['retry_after_seconds'] ?? null) !== null
+            || $state->lease !== null || ($pending->route ?? null) !== 'V4-09' || $mapping === null
+            || $mapping->connection_id !== $connection->connection_id || $mapping->source_id !== $source->source_id
+            || ($event->event_type ?? null) !== 'publication' || $event->source->source_revision !== $source->source_revision
+            || $event->source->source_id !== $source->source_id) return false;
+
+        $current = $client->request('V4-11', ['path' => ['mapping_id' => $mapping->mapping_id]]);
+        if (is_wp_error($current) || !in_array($current->mapping_state, ['pending', 'active'], true)
+            || $current->desired_source_revision === null || $current->desired_source_revision === $source->source_revision) return false;
+        foreach (['mapping_id', 'resource_id', 'connection_id', 'source_id', 'external_id', 'canonical_url', 'destination_native_id'] as $field) {
+            if ($current->$field !== $mapping->$field) return false;
+        }
+
+        foreach ($state->jobs as $queued) {
+            $successor = $queued->event ?? null;
+            if (($successor->event_type ?? null) !== 'publication' || $successor->source->source_id !== $source->source_id
+                || $successor->source->topic_id !== $source->topic_id
+                || $successor->source->source_revision !== $current->desired_source_revision
+                || CmsSourceContinuation::compare($successor->event_sequence, $event->event_sequence) <= 0) continue;
+
+            // The current owned mapping corroborates the later staged edition.
+            // Retire the rejected prepare in the same journal write that removes its job.
+            $state->retired[] = (object) ['reason' => 'superseded_mapping_prepare', 'jobs' => [$job],
+                'pending' => $pending, 'lease' => null, 'rejection' => (object) $data, 'successor_event_id' => $successor->event_id];
+            $state->mappings->{$source->source_id} = $current;
+            CmsMutation::settled($state);
+            return true;
+        }
+        return false;
     }
 
     private static function reconcile(CmsClient $client, stdClass $state, string $scope, string $receiver_scope, callable $save): bool|WP_Error
