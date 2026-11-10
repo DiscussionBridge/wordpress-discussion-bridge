@@ -32,7 +32,8 @@ final class NativeSourceSnapshot
         if (!is_object($after) || $wpdb->last_error !== '' || get_object_vars($after) != get_object_vars($row) || get_permalink($captured) !== $article_url) return self::error();
         return ['post_id' => (string) $id, 'post_type' => $captured->post_type, 'slug' => $captured->post_name, 'url' => $article_url,
             'original_article' => $original, 'source_article_url' => $preparation_url,
-            'title' => get_the_title($captured), 'complete_html' => $html, 'complete_bytes' => strlen($html), 'complete_sha256' => hash('sha256', $html),
+            'title' => html_entity_decode(get_the_title($captured), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            'complete_html' => $html, 'complete_bytes' => strlen($html), 'complete_sha256' => hash('sha256', $html),
             'created_at' => self::native_date($captured->post_date_gmt ?? null), 'updated_at' => self::native_date($captured->post_modified_gmt ?? null),
             'author' => $author, 'row' => $columns, 'row_sha256' => hash('sha256', (string) wp_json_encode($columns))];
     }

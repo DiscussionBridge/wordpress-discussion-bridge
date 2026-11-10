@@ -77,6 +77,15 @@ test('native complete content and UTC observations retain full source before ind
     $post->post_status = 'draft'; expect(is_wp_error(NativeSourceSnapshot::capture(1)));
 });
 
+test('native source snapshot decodes WordPress title entities once', function (): void {
+    native_reset();
+    $post = $GLOBALS['native']['posts'][1];
+    $post->post_title = 'Editor&#8217;s notes &#8211; Café &amp; tea &amp;copy;';
+    $snapshot = NativeSourceSnapshot::capture(1);
+    expect(is_array($snapshot) && $snapshot['title'] === 'Editor’s notes – Café & tea &copy;');
+    expect($post->post_title === $snapshot['row']['post_title']);
+});
+
 test('owned source deletion under another native writer is vetoed before metadata loss while unrelated native deletion passes', function (): void {
     native_reset(); [$deletion, $writer, $journal] = native_deletion(); $database = $GLOBALS['wpdb'];
     $GLOBALS['wpdb'] = new NativeTestDb('202'); $other = $writer->acquire(); $GLOBALS['wpdb'] = $database;
