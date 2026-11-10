@@ -47,10 +47,9 @@
   border: 0;
 }
 
-.discussionbridge-discussion--interactive iframe,
-.discussionbridge-record--interactive iframe {
+.discussionbridge-embed[data-discussionbridge-embed="interactive"] {
   min-height: 360px;
-  height: 800px !important;
+  height: 360px;
 }
 
 .discussionbridge-credit {
@@ -139,11 +138,6 @@
   }
 
   .discussionbridge-simple__meta { align-items: flex-start; flex-direction: column; gap: 0.2rem; }
-
-  .discussionbridge-discussion--interactive iframe,
-  .discussionbridge-record--interactive iframe {
-    height: min(800px, 75vh) !important;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

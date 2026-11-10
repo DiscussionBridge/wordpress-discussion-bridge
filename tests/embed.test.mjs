@@ -32,7 +32,10 @@ test("independent native iframe messages require their exact origin and window",
   send(second.contentWindow, "https://forum.example", { type: "discourse-resize", height: 600 });
   assert.equal(second.style.height, "600px");
   send(interactive.contentWindow, "https://forum.example", { type: "discourse-resize", height: 900 });
-  assert.equal(interactive.style.height, undefined);
+  assert.equal(interactive.style.height, "900px");
+  send(interactive.contentWindow, "https://forum.example", { type: "discourse-resize", height: 385 });
+  assert.equal(interactive.style.height, "385px");
+  assert.equal(second.style.height, "600px");
   send(second.contentWindow, "https://forum.example", { type: "discourse-scroll", top: 20 });
   assert.deepEqual(scrolls, [[0, 163]]);
 });

@@ -8,7 +8,7 @@
       let origin;
       try { origin = new URL(frame.src).origin; } catch { continue; }
       if (event.origin !== origin) continue;
-      if (event.data.type === "discourse-resize" && frame.dataset.discussionbridgeEmbed !== "interactive") {
+      if (event.data.type === "discourse-resize") {
         const height = event.data.height;
         if (typeof height === "number" && Number.isFinite(height) && height > 0 && height <= 100000) {
           frame.style.height = Math.ceil(height) + "px";

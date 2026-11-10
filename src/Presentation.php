@@ -7,6 +7,7 @@ namespace DiscussionBridge\WordPress;
 final class Presentation
 {
     private const META_PREFIX = '_discussionbridge_';
+    private const EMBED_ASSET_VERSION = DISCUSSIONBRIDGE_WORDPRESS_VERSION . '-frame-resize';
     private const INITIAL_SIMPLE_REPLIES = 5;
     private const MAX_SIMPLE_REPLIES = 50;
     public const COMMENTS_MODE_META = '_discussionbridge_comments_mode';
@@ -57,7 +58,7 @@ final class Presentation
                 'discussionbridge-presentation',
                 plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
                 [],
-                DISCUSSIONBRIDGE_WORDPRESS_VERSION
+                self::EMBED_ASSET_VERSION
             );
             $post_id = (int) get_queried_object_id();
             if ($post_id > 0 && get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1'
@@ -292,7 +293,7 @@ final class Presentation
             $replies .= '<p class="discussionbridge-simple__limit">' . esc_html(sprintf(__('Showing the first %d comments.', 'discussionbridge'), self::MAX_SIMPLE_REPLIES))
                 . ' <a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('View the complete discussion at source', 'discussionbridge') . '</a>.</p>';
         }
-        wp_enqueue_style('discussionbridge-presentation', plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION);
+        wp_enqueue_style('discussionbridge-presentation', plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], self::EMBED_ASSET_VERSION);
         return '<section class="discussionbridge-simple"><div class="discussionbridge-discussion__header"><h2>' . esc_html__('Comments', 'discussionbridge')
             . '</h2><a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('Open discussion', 'discussionbridge') . '</a></div>'
             . $replies . self::discourse_credit($client) . ($include_credit ? self::credit() : '') . '</section>';
@@ -342,13 +343,13 @@ final class Presentation
             'discussionbridge-presentation',
             plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
             [],
-            DISCUSSIONBRIDGE_WORDPRESS_VERSION
+            self::EMBED_ASSET_VERSION
         );
         wp_register_script(
             'discussionbridge-discourse-embed',
             plugins_url('assets/discussionbridge-embed.js', DISCUSSIONBRIDGE_WORDPRESS_FILE),
             [],
-            DISCUSSIONBRIDGE_WORDPRESS_VERSION,
+            self::EMBED_ASSET_VERSION,
             true
         );
         wp_enqueue_script('discussionbridge-discourse-embed');
