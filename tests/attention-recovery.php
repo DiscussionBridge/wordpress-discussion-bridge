@@ -121,6 +121,8 @@ function ar_attention_native(bool $applied = true): array {
         $result = FromSynchronizer::serialized(fn($guard) => CmsNativeWriter::apply($client, $connection, $connection->policy, $job, $state, $save, $guard));
         expect($result instanceof stdClass, 'native test setup must apply a real owned fixture');
         $job->mapping->destination_native_id = $result->native_id; $job->mapping->destination_native_revision = $result->native_revision;
+        expect_only_public_topic_reads($job->source->topic_id);
+        $GLOBALS['dbt']['requests'] = [];
     }
     $work = clone $state->lease->work; $work->state = 'attention'; $work->last_failure_code = 'public_verification_failed';
     $job->event = null; $job->prepared = true; $job->synchronized = false; $job->verification = null;

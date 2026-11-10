@@ -39,6 +39,13 @@ use DiscussionBridge\CmsV4\NoContent;
 $tests = [];
 function test(string $name, callable $case): void { $GLOBALS['tests'][] = [$name, $case]; }
 function expect(bool $condition, string $message = 'assertion failed'): void { if (!$condition) throw new RuntimeException($message); }
+function expect_only_public_topic_reads(string $topic_id): void {
+    $public_topic = Settings::server_url() . '/t/' . $topic_id . '.json';
+    foreach ($GLOBALS['dbt']['requests'] as [$url, $args]) {
+        expect($url === $public_topic && $args['method'] === 'GET' && $args['cookies'] === []
+            && !isset($args['headers']['X-DiscussionBridge-Secret']));
+    }
+}
 function fixture(string $id): stdClass {
     $items = json_decode(file_get_contents(__DIR__ . '/fixtures/v4-author-types.json'))->fixtures;
     foreach ($items as $item) if ($item->id === $id) {
@@ -236,9 +243,15 @@ function native_job(): array {
 
 test('isolated V4 leased From create retains ownedID fullcontent and separate DOM anonymousfetch observation', function (): void {
     configured(); [$client, $conn, $job, $state, $save] = native_job();
+    $job->source->source_authors[0]->id = '17';
+    $public_topic = Settings::server_url() . '/t/' . $job->source->topic_id . '.json';
+    $GLOBALS['dbt']['responses'][$public_topic] = dbt_response(200, ['post_stream' => ['posts' => [
+        ['post_number' => 1, 'user_id' => 17, 'username' => 'original-author'],
+    ]]]);
     $result = FromSynchronizer::serialized(fn($guard) => CmsNativeWriter::apply($client, $conn, $conn->policy, $job, $state, $save, $guard));
     expect($result instanceof stdClass, is_wp_error($result) ? $result->get_error_code() : 'native result absent'); $id = (int) $result->native_id;
     expect($GLOBALS['dbt']['posts'][$id]->post_content === base64_decode($job->hydration->bytes_base64) . CmsPresentation::provenance($conn, $job->source));
+    expect(str_contains($GLOBALS['dbt']['posts'][$id]->post_content, 'href="' . Settings::server_url() . '/u/original-author"'));
     expect(CmsNativeWriter::confirm($client, $job, $state, $conn));
     $mapping = clone $job->mapping; $mapping->synchronized_at = gmdate('Y-m-d\TH:i:s', time() - 1) . '.000Z';
     $receipt = get_post_meta($id, CmsPresentation::META, true); $page = CmsPresentation::expected($GLOBALS['dbt']['posts'][$id], $receipt);
@@ -359,7 +372,8 @@ test('final native creation body mismatch vetoes SQL and durably preserves compl
     expect($job->local_issue->rollback_proven && $job->local_issue->work == $state->lease->work && $job->creation_attempt === null);
     $stored = (new CmsJournal())->read(); expect($stored->jobs[0]->hydration->bytes_base64 === $job->hydration->bytes_base64 && $stored->jobs[0]->local_issue == $job->local_issue);
     expect($job->local_issue->observation->expected_sha256 === hash('sha256', base64_decode($job->hydration->bytes_base64) . CmsPresentation::provenance($conn, $job->source)));
-    expect($GLOBALS['dbt']['requests'] === [] && $GLOBALS['dbt']['native_lock'] === null);
+    expect_only_public_topic_reads($job->source->topic_id);
+    expect($GLOBALS['dbt']['native_lock'] === null);
     unset($GLOBALS['dbt']['native_final_data_callback']);
     expect(wp_insert_post(['post_title' => 'Unrelated source', 'post_content' => '<p>Ordinary body</p>'], true) > 0);
 });
@@ -941,7 +955,8 @@ test('From final native function loss is observed before SQL and never acknowled
     $result = FromSynchronizer::serialized(fn($guard) => CmsNativeWriter::apply($client, $conn, $conn->policy, $job, $state, $save, $guard));
     expect(is_wp_error($result) && $result->get_error_code() === 'discussionbridge_cms_native_body_limitation');
     expect($job->local_issue->observation->function_loss['kind'] === 'event_handler' && $GLOBALS['dbt']['inserted'] === [] && $job->native_result === null);
-    expect(base64_decode($job->hydration->bytes_base64) === $original && $GLOBALS['dbt']['requests'] === []);
+    expect(base64_decode($job->hydration->bytes_base64) === $original);
+    expect_only_public_topic_reads($job->source->topic_id);
 });
 
 test('parsed nonempty inert article data removed alongside prose reports specific DATA loss on To and final From without executing it', function (): void {
@@ -959,7 +974,8 @@ test('parsed nonempty inert article data removed alongside prose reports specifi
     $result = FromSynchronizer::serialized(fn($guard) => CmsNativeWriter::apply($client, $conn, $conn->policy, $job, $state, $save, $guard));
     expect(is_wp_error($result) && $result->get_error_code() === 'discussionbridge_cms_native_body_limitation');
     expect($job->local_issue->observation->function_loss === null && $job->local_issue->observation->data_loss['kind'] === 'script_data');
-    expect($GLOBALS['dbt']['inserted'] === [] && $job->native_result === null && base64_decode($job->hydration->bytes_base64) === $original && $GLOBALS['dbt']['requests'] === []);
+    expect($GLOBALS['dbt']['inserted'] === [] && $job->native_result === null && base64_decode($job->hydration->bytes_base64) === $original);
+    expect_only_public_topic_reads($job->source->topic_id);
 });
 
 function preservation_error(): stdClass {

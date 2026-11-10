@@ -31,8 +31,21 @@ final class CmsPresentation
     /** Each source author remains provenance; no source identity is mapped into a native user. */
     public static function provenance(stdClass $connection, stdClass $source): string
     {
+        $topic = $source->source_authors === [] ? null : (new NativeForumClient())->public_topic((int) $source->topic_id);
+        $first_post = is_array($topic) ? ($topic['post_stream']['posts'][0] ?? []) : [];
+        $username = $first_post['username'] ?? null;
+        $profile = ($first_post['post_number'] ?? null) === 1
+            && is_string($username) && !in_array($username, ['', '.', '..'], true)
+            ? Settings::server_url() . '/u/' . rawurlencode($username) : null;
+
         $authors = [];
-        foreach ($source->source_authors as $author) $authors[] = '<span data-source-author-id="' . esc_attr($author->id) . '">' . esc_html($author->name) . '</span>';
+        foreach ($source->source_authors as $author) {
+            $name = esc_html($author->name);
+            if ($profile !== null && $author->id === (string) ($first_post['user_id'] ?? '')) {
+                $name = '<a href="' . esc_url($profile) . '">' . $name . '</a>';
+            }
+            $authors[] = '<span data-source-author-id="' . esc_attr($author->id) . '">' . $name . '</span>';
+        }
         $dates = '';
         foreach (['source_created_at' => 'Published', 'source_updated_at' => 'Updated'] as $field => $label) {
             if ($source->$field !== null) $dates .= '<time datetime="' . esc_attr($source->$field) . '">' . esc_html($label . ': ' . $source->$field) . '</time>';
