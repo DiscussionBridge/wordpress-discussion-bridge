@@ -26,11 +26,13 @@ final class CmsPublicVerifier
         if (is_wp_error($revision) || ($state['managed_revision'] ?? null) !== $revision || $native_result->native_revision !== $revision
             || !hash_equals($native_result->ownership_receipt_sha256, $client->codec()->nativeOwnershipReceiptSha256((object) $state['receipt']))) return self::failed();
         $expected = null;
+        $implicit_loading = [];
         if ($native_result->kind === 'publish_revision') {
             if ($source === null || $native->post_status !== 'publish' || get_permalink($native) !== $mapping->canonical_url
                 || $state['receipt']['source_revision'] !== $source->source_revision || $state['source_sha256'] !== $source->content_sha256
                 || $state['mode'] !== $mapping->presentation_mode) return self::failed();
-            $expected = self::fragment(CmsPresentation::expected($native, $state), $state);
+            $implicit_loading = self::implicit_loading_sources($native->post_content);
+            $expected = self::fragment(CmsPresentation::expected($native, $state), $state, $implicit_loading);
             if (is_wp_error($expected)) return $expected;
         } elseif ($native->post_status === 'publish') return self::failed();
         if (!$guard()) return self::failed();
@@ -50,7 +52,7 @@ final class CmsPublicVerifier
         } else {
             $media = strtolower(trim(wp_remote_retrieve_header($response, 'content-type')));
             if ($status !== 200 || preg_match('/\Atext\/html(?:\s*;.*)?\z/iD', $media) !== 1 || preg_match('//u', $raw) !== 1) return self::failed();
-            $actual = self::fragment($raw, $state);
+            $actual = self::fragment($raw, $state, $implicit_loading);
             if (is_wp_error($actual) || !hash_equals(hash('sha256', $expected), hash('sha256', $actual))) return self::failed();
             $report = (object) ['kind' => 'published', 'url' => $mapping->canonical_url, 'native_id' => $id,
                 'source_revision' => $source->source_revision, 'source_content_sha256' => $source->content_sha256,
@@ -68,7 +70,22 @@ final class CmsPublicVerifier
         return $report;
     }
 
-    private static function fragment(string $html, array $state): string|WP_Error
+    private static function implicit_loading_sources(string $content): array
+    {
+        if (!class_exists(\WP_HTML_Tag_Processor::class)) return [];
+        $tags = new \WP_HTML_Tag_Processor($content);
+        $implicit = [];
+        $explicit = [];
+        while ($tags->next_tag('IMG')) {
+            $src = $tags->get_attribute('src');
+            if (!is_string($src) || $src === '') continue;
+            if ($tags->get_attribute('loading') === null) $implicit[$src] = true;
+            else $explicit[$src] = true;
+        }
+        return array_diff_key($implicit, $explicit);
+    }
+
+    private static function fragment(string $html, array $state, array $implicit_loading = []): string|WP_Error
     {
         if (!class_exists(DOMDocument::class)) return self::failed();
         $old = libxml_use_internal_errors(true);
@@ -83,22 +100,26 @@ final class CmsPublicVerifier
                 || $fragment->getAttribute('data-resource-id') !== $state['receipt']['resource_id']
                 || $fragment->getAttribute('data-source-revision') !== $state['receipt']['source_revision']
                 || $fragment->getAttribute('data-presentation-mode') !== $state['mode']) return self::failed();
-            self::canonicalize($fragment);
+            self::canonicalize($fragment, $implicit_loading);
             $serialized = $document->saveHTML($fragment);
             return is_string($serialized) ? $serialized : self::failed();
         } finally { libxml_clear_errors(); libxml_use_internal_errors($old); }
     }
 
-    private static function canonicalize(DOMElement $element): void
+    private static function canonicalize(DOMElement $element, array $implicit_loading): void
     {
         $attributes = [];
         foreach ($element->attributes as $attribute) $attributes[$attribute->name] = $attribute->value;
         // Existing renderer allocates request-local iframe IDs; they are not native publication identities.
         if ($element->tagName === 'iframe' && isset($attributes['data-discussionbridge-embed'])) unset($attributes['id']);
+        // WordPress inserts this hint according to request-local image counts.
+        // An authored loading attribute and every image target remain exact.
+        if ($element->tagName === 'img' && ($attributes['loading'] ?? null) === 'lazy'
+            && isset($implicit_loading[$attributes['src'] ?? ''])) unset($attributes['loading']);
         while ($element->attributes->length > 0) $element->removeAttributeNode($element->attributes->item(0));
         ksort($attributes, SORT_STRING);
         foreach ($attributes as $name => $value) $element->setAttribute($name, $value);
-        foreach ($element->childNodes as $child) if ($child instanceof DOMElement) self::canonicalize($child);
+        foreach ($element->childNodes as $child) if ($child instanceof DOMElement) self::canonicalize($child, $implicit_loading);
     }
 
     private static function failed(): WP_Error { return new WP_Error('discussionbridge_cms_public_verification_failed', 'The anonymous canonical native publication could not be verified. Preserve the synchronized result for reconciliation.'); }
