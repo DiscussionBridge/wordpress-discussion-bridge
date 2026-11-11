@@ -13,6 +13,7 @@ final class Settings
     public const LANE_OPTION = 'discussionbridge_lane';
     public const POST_TYPES_OPTION = 'discussionbridge_post_types';
     public const COMMENTS_MODE_OPTION = 'discussionbridge_comments_mode';
+    public const CREDIT_OPTION = 'discussionbridge_credit_enabled';
     public const SERVICE_AUTHOR_OPTION = 'discussionbridge_service_author';
     public const RICH_CONTENT_OPTION = 'discussionbridge_rich_content';
     public static function register(): void
@@ -53,11 +54,26 @@ final class Settings
             'sanitize_callback' => [self::class, 'sanitize_service_author'],
             'default' => '',
         ]);
+        register_setting('discussionbridge', self::CREDIT_OPTION, [
+            'type' => 'string',
+            'sanitize_callback' => [self::class, 'sanitize_credit'],
+            'default' => '1',
+        ]);
         register_setting('discussionbridge', self::RICH_CONTENT_OPTION, [
             'type' => 'string',
             'sanitize_callback' => [self::class, 'sanitize_rich_content'],
             'default' => 'preserve',
         ]);
+    }
+
+    public static function sanitize_credit(mixed $value): string
+    {
+        return in_array($value, ['0', 0, false], true) ? '0' : '1';
+    }
+
+    public static function credit_enabled(): bool
+    {
+        return self::sanitize_credit(get_option(self::CREDIT_OPTION, '1')) === '1';
     }
 
     public static function sanitize_rich_content(mixed $value): string

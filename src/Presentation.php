@@ -8,6 +8,7 @@ final class Presentation
 {
     private const META_PREFIX = '_discussionbridge_';
     private const EMBED_ASSET_VERSION = DISCUSSIONBRIDGE_WORDPRESS_VERSION . '-frame-resize';
+    private const PRESENTATION_ASSET_VERSION = DISCUSSIONBRIDGE_WORDPRESS_VERSION . '-credit';
     private const INITIAL_SIMPLE_REPLIES = 5;
     private const MAX_SIMPLE_REPLIES = 50;
     public const COMMENTS_MODE_META = '_discussionbridge_comments_mode';
@@ -58,7 +59,7 @@ final class Presentation
                 'discussionbridge-presentation',
                 plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
                 [],
-                self::EMBED_ASSET_VERSION
+                self::PRESENTATION_ASSET_VERSION
             );
             $post_id = (int) get_queried_object_id();
             if ($post_id > 0 && get_post_meta($post_id, Materializer::IMPORTED_META, true) === '1'
@@ -100,10 +101,10 @@ final class Presentation
     }
 
     /** Existing native renderer with explicit validated mapping context for canonical verification. */
-    public static function append_for_mapping(string $content, array $mapping, string $mode, bool $source_presentation, bool $source_boundary = false): string
+    public static function append_for_mapping(string $content, array $mapping, string $mode, bool $source_presentation, bool $source_boundary = false, bool $include_credit = true): string
     {
         if ($mode === 'simple') {
-            $simple = self::render_simple($mapping['topic_id'], $mapping['topic_url']);
+            $simple = self::render_simple($mapping['topic_id'], $mapping['topic_url'], $include_credit);
             if ($simple === '') return $source_boundary ? CmsSourceArticleProfile::mark_content($content) : $content;
             $article = TableOfContents::render($content);
             return ($source_boundary ? CmsSourceArticleProfile::mark_content($article) : $article) . $simple;
@@ -111,14 +112,12 @@ final class Presentation
 
         $article = TableOfContents::render($content);
         return ($source_boundary ? CmsSourceArticleProfile::mark_content($article) : $article) . sprintf(
-            '<section class="discussionbridge-discussion discussionbridge-discussion--%s" data-discussionbridge-resource="%s"><div class="discussionbridge-discussion__header"><h2>%s</h2><a href="%s">%s</a></div>%s%s</section>',
+            '<section class="discussionbridge-discussion discussionbridge-discussion--%s" data-discussionbridge-resource="%s">%s%s%s</section>',
             esc_attr($mode),
             esc_attr($mapping['resource_id']),
-            esc_html__('Discussion', 'discussionbridge'),
-            esc_url($mapping['topic_url']),
-            esc_html__('Open in Discourse', 'discussionbridge'),
+            self::discussion_header($mapping['topic_url']),
             self::embed_markup($mapping['topic_id'], $mode, $source_presentation),
-            self::credit()
+            $include_credit ? self::credit() : ''
         );
     }
 
@@ -170,13 +169,19 @@ final class Presentation
         $revision = CmsNativeFence::revision($id);
         if (!is_string($revision) || ($state['managed_revision'] ?? null) !== $revision) return '';
         $content = TableOfContents::render($native->post_content);
-        if ($comments_mode !== 'none') $content = self::append_for_mapping($content,
-            ['resource_id' => $resource_id, 'topic_id' => (int) $record->topic_id, 'topic_url' => $record->topic_url], $comments_mode, true);
+        if ($comments_mode !== 'none') {
+            $content = self::append_for_mapping($content,
+                ['resource_id' => $resource_id, 'topic_id' => (int) $record->topic_id, 'topic_url' => $record->topic_url],
+                $comments_mode, true, include_credit: false) . self::credit();
+        }
         if (self::rich_content_enabled($id)) wp_enqueue_script('discussionbridge-rich-content', plugins_url('assets/discussionbridge-rich-content.js', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], DISCUSSIONBRIDGE_WORDPRESS_VERSION, true);
-        return '<section class="discussionbridge-record" data-discussionbridge-resource="' . esc_attr($resource_id) . '">' . $content . self::credit() . '</section>';
+        return '<section class="discussionbridge-record" data-discussionbridge-resource="' . esc_attr($resource_id) . '">' . $content . '</section>';
     }
     private static function credit(): string
     {
+        if (!Settings::credit_enabled()) {
+            return '';
+        }
         return sprintf(
             '<footer class="discussionbridge-credit" aria-label="%s"><span class="discussionbridge-credit__prefix">%s</span> <a class="discussionbridge-credit__brand" href="%s" rel="nofollow">%s</a></footer>',
             esc_attr__('DiscussionBridge credit', 'discussionbridge'),
@@ -293,10 +298,27 @@ final class Presentation
             $replies .= '<p class="discussionbridge-simple__limit">' . esc_html(sprintf(__('Showing the first %d comments.', 'discussionbridge'), self::MAX_SIMPLE_REPLIES))
                 . ' <a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('View the complete discussion at source', 'discussionbridge') . '</a>.</p>';
         }
-        wp_enqueue_style('discussionbridge-presentation', plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], self::EMBED_ASSET_VERSION);
-        return '<section class="discussionbridge-simple"><div class="discussionbridge-discussion__header"><h2>' . esc_html__('Comments', 'discussionbridge')
-            . '</h2><a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer">' . esc_html__('Open discussion', 'discussionbridge') . '</a></div>'
+        wp_enqueue_style('discussionbridge-presentation', plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE), [], self::PRESENTATION_ASSET_VERSION);
+        return '<section class="discussionbridge-simple">' . self::discussion_header($topic_url)
             . $replies . self::discourse_credit($client) . ($include_credit ? self::credit() : '') . '</section>';
+    }
+
+    private static function discussion_header(string $topic_url): string
+    {
+        $cache_key = 'discussionbridge_forum_label_' . hash('sha256', Settings::server_url() . "\n" . Settings::connection_id());
+        $name = get_transient($cache_key);
+        if (!is_string($name)) {
+            $connection = (new CmsClient())->request('V4-01');
+            $name = is_wp_error($connection) ? '' : ($connection->forum_name ?? '');
+            $name = Settings::valid_forum_name($name) ? $name : '';
+            set_transient($cache_key, $name, $name === '' ? 30 : 5 * MINUTE_IN_SECONDS);
+        }
+        wp_enqueue_script('discussionbridge-labels', plugins_url('assets/discussionbridge-labels.js', DISCUSSIONBRIDGE_WORDPRESS_FILE),
+            [], DISCUSSIONBRIDGE_WORDPRESS_VERSION . '-labels', true);
+        $label = $name === '' ? '' : sprintf(__('Open in %s', 'discussionbridge'), $name);
+        return '<div class="discussionbridge-discussion__header"><h2>' . esc_html__('Discussion', 'discussionbridge')
+            . '</h2><a href="' . esc_url($topic_url) . '" rel="nofollow noopener noreferrer" data-discussionbridge-forum-label="'
+            . esc_attr($label) . '">' . esc_html__('Open in forum', 'discussionbridge') . '</a></div>';
     }
 
     private static function discourse_credit(NativeForumClient $client): string
@@ -343,7 +365,7 @@ final class Presentation
             'discussionbridge-presentation',
             plugins_url('assets/discussionbridge.css', DISCUSSIONBRIDGE_WORDPRESS_FILE),
             [],
-            self::EMBED_ASSET_VERSION
+            self::PRESENTATION_ASSET_VERSION
         );
         wp_register_script(
             'discussionbridge-discourse-embed',

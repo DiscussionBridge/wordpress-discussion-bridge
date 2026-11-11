@@ -52,16 +52,6 @@
   height: 360px;
 }
 
-.discussionbridge-credit {
-  margin: 0.45rem 0 0;
-  color: inherit;
-  text-align: center;
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.4;
-  opacity: 0.72;
-}
-
 .discussionbridge-simple__reply {
   display: grid;
   grid-template-columns: 2.75rem minmax(0, 1fr);
@@ -90,46 +80,9 @@
 .discussionbridge-simple__more[open] .discussionbridge-simple__more-open { display: inline; }
 .discussionbridge-simple__limit { text-align: center; font-size: 0.9rem; }
 
-.discussionbridge-credit__brand {
-  position: relative;
-  color: inherit;
-  text-decoration: none;
-  transition: color 160ms ease;
-}
-
-.discussionbridge-credit__brand::after {
-  position: absolute;
-  right: 0;
-  bottom: -0.12em;
-  left: 0;
-  height: 1px;
-  background: currentColor;
-  content: "";
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 180ms ease;
-}
-
-.discussionbridge-credit__brand:hover,
-.discussionbridge-credit__brand:focus-visible {
-  color: var(--wp--preset--color--accent-2, #3451b2);
-  opacity: 1;
-}
-
 .discussionbridge-powered-by { display: flex; align-items: center; justify-content: center; gap: 0.45rem; margin: 0.8rem auto 0; color: inherit; font-size: 0.8rem; text-decoration: none; opacity: 0.72; }
 .discussionbridge-powered-by__wordmark { display: inline-flex; width: 6.4rem; padding: 0.12rem 0.28rem; border-radius: 0.2rem; background: #fff; }
 .discussionbridge-powered-by__wordmark svg { display: block; width: 100%; height: auto; }
-
-.discussionbridge-credit__brand:hover::after,
-.discussionbridge-credit__brand:focus-visible::after {
-  transform: scaleX(1);
-}
-
-.discussionbridge-credit__brand:focus-visible {
-  border-radius: 0.15rem;
-  outline: 2px solid currentColor;
-  outline-offset: 0.2rem;
-}
 
 @media (max-width: 520px) {
   .discussionbridge-discussion__header {
@@ -140,9 +93,56 @@
   .discussionbridge-simple__meta { align-items: flex-start; flex-direction: column; gap: 0.2rem; }
 }
 
+/* Customize credit colors with the inherited --discussionbridge-credit-* properties. */
+:is(footer, p).discussionbridge-credit {
+  margin: 0.45rem 0 0;
+  color: var(--sl-color-gray-3, inherit);
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.discussionbridge-credit > a:any-link {
+  position: relative;
+  padding-inline: 0.22em;
+  border-radius: 0.2em;
+  color: var(--discussionbridge-credit-link-color, inherit);
+  background-color: var(--discussionbridge-credit-background, transparent);
+  text-decoration: none;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.discussionbridge-credit > a::after {
+  position: absolute;
+  inset-inline: 0.22em;
+  bottom: -0.12em;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
+.discussionbridge-credit > a:is(:hover, :focus-visible) {
+  --_discussionbridge-credit-accent: var(--sl-color-accent-high, var(--wp--preset--color--accent-2, var(--ghost-accent-color, #3451b2)));
+  color: var(--discussionbridge-credit-hover-link-color, color-mix(in srgb, var(--_discussionbridge-credit-accent) 42%, currentColor));
+  background-color: var(--discussionbridge-credit-hover-background, color-mix(in srgb, currentColor 16%, transparent));
+}
+
+.discussionbridge-credit > a:is(:hover, :focus-visible)::after {
+  transform: scaleX(1);
+}
+
+.discussionbridge-credit > a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 0.2rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .discussionbridge-credit__brand,
-  .discussionbridge-credit__brand::after {
+  .discussionbridge-credit > a,
+  .discussionbridge-credit > a::after {
     transition: none;
   }
 }

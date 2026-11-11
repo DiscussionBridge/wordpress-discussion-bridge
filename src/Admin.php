@@ -126,7 +126,12 @@ final class Admin
         foreach (get_post_types(['public' => true], 'names') as $type) if ($type !== 'attachment') echo '<label><input type="checkbox" name="' . esc_attr(Settings::POST_TYPES_OPTION) . '[]" value="' . esc_attr($type) . '" ' . checked(in_array($type, Settings::post_types(), true), true, false) . '> ' . esc_html($type) . '</label> ';
         echo '<p>Discussion mode</p><select name="' . esc_attr(Settings::COMMENTS_MODE_OPTION) . '">';
         foreach (['none', 'simple', 'full', 'interactive'] as $mode) echo '<option ' . selected(Settings::comments_mode(), $mode, false) . '>' . esc_html($mode) . '</option>';
-        echo '</select><p>Math and diagram renderer</p><select name="' . esc_attr(Settings::RICH_CONTENT_OPTION) . '">';
+        echo '</select>';
+        $credit_option = esc_attr(Settings::CREDIT_OPTION);
+        echo '<p><input type="hidden" name="' . $credit_option . '" value="0">'
+            . '<label><input type="checkbox" name="' . $credit_option . '" value="1"'
+            . checked(Settings::credit_enabled(), true, false) . '> Show DiscussionBridge credit</label></p>';
+        echo '<p>Math and diagram renderer</p><select name="' . esc_attr(Settings::RICH_CONTENT_OPTION) . '">';
         foreach (['preserve' => 'Preserve current renderer behavior', 'enabled' => 'Enabled', 'disabled' => 'Disabled; retain source'] as $value => $label) echo '<option value="' . esc_attr($value) . '" ' . selected(Settings::rich_content(), $value, false) . '>' . esc_html($label) . '</option>';
         echo '</select>'; submit_button(); echo '</form>';
         $status = FromSynchronizer::status();
