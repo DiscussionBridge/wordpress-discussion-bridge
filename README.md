@@ -1,6 +1,14 @@
-# DiscussionBridge WordPress V4 development
+# DiscussionBridge for WordPress
 
-Implementation/package version: `0.4.0-alpha.1`. Wire: V4. This is an unpublished development component paired to candidate `discussionbridge-v4-core-20261029-r7`; release version is null. This pairing has no independent adapter review or installed-native qualification disposition yet. Dated earlier development sections describe their original batches, not current acceptance.
+DiscussionBridge for WordPress publishes authorized Discourse topics as native
+WordPress articles, sends eligible WordPress publications to Discourse, and
+displays discussions using the configured presentation mode.
+
+**V4 Alpha source:** [`v0.4.0-alpha.1.wp.3`](https://github.com/DiscussionBridge/wordpress-discussion-bridge/tree/v0.4.0-alpha.1.wp.3) · [GitHub Actions](https://github.com/DiscussionBridge/wordpress-discussion-bridge/actions/runs/43107195692)
+
+The plugin uses the [V4 R7 contract](https://github.com/DiscussionBridge/discussionbridge-adapter-contract/tree/09d77c0209835c2d996aad294d161f167c7bd838). Build the installable ZIP
+from the tagged source using the packaging instructions below. Earlier
+implementation notes describe the scope of the checks they report.
 
 ## Complete package and maintainer checks
 
