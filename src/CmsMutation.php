@@ -88,7 +88,7 @@ final class CmsMutation
                     && $rejection->request_identity === $pending->identity && $rejection->error->code === 'invalid_field';
             } catch (\Throwable) { return false; }
         }
-        // The shipped strict client already persisted this terminal. Missing historical Error fields stay UNKNOWN.
+        // Use the retained refusal evidence. Missing Error fields stay unknown.
         return ($state->terminal->code ?? null) === 'invalid_field' && ($state->terminal->status ?? null) === 422
             && isset($state->capture->body)
             && CmsArtifacts::codec()->semanticIdentity($state->capture->body) === CmsArtifacts::codec()->semanticIdentity($pending->options->body->bridge_record);
